@@ -2,990 +2,432 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>VoiceDub — Offline Dubbing Studio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceDub — Video to Hindi</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 :root{
   --ink:#0d0d14;--paper:#f5f2eb;--cream:#ede9de;--gold:#c8a84b;
-  --rust:#c0522a;--teal:#2a7c6f;--slate:#3d3d52;--fog:#9492a0;
-  --line:#d8d4c8;--white:#fff;--red:#c0392b;--green:#27ae60;
-  --r-sm:6px;--r-md:12px;--r-lg:18px;
-  --shadow:0 2px 8px rgba(13,13,20,.10);
-  --shadow-lg:0 8px 32px rgba(13,13,20,.14);
+  --rust:#c0522a;--teal:#2a7c6f;--fog:#9492a0;--line:#d8d4c8;
+  --white:#fff;--red:#c0392b;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{background:var(--paper);color:var(--ink);font-family:'Space Grotesk',sans-serif;
-  line-height:1.5;min-height:100vh;-webkit-tap-highlight-color:transparent}
-.page{max-width:800px;margin:0 auto;padding:32px 16px 80px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:'Space Grotesk',sans-serif;min-height:100vh}
+.page{max-width:720px;margin:0 auto;padding:32px 16px 80px}
 
 /* HEADER */
-.hdr{margin-bottom:36px}
-.hdr-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.brand-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;
-  text-transform:uppercase;color:var(--fog);margin-bottom:5px}
-.brand-name{font-size:44px;font-weight:700;letter-spacing:-2px;line-height:1}
-.brand-name em{font-style:normal;color:var(--rust)}
-.brand-sub{margin-top:8px;font-size:13px;color:var(--fog)}
-.badge-off{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;
-  background:var(--teal);color:#fff;border-radius:99px;font-size:11px;font-weight:600;
-  letter-spacing:.5px;text-transform:uppercase;flex-shrink:0;margin-top:8px}
-.badge-off::before{content:'';width:7px;height:7px;border-radius:50%;background:#6ef0c8;
-  animation:pdot 1.8s ease-in-out infinite}
-@keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.75)}}
+.brand{font-size:40px;font-weight:700;letter-spacing:-2px}
+.brand em{font-style:normal;color:var(--rust)}
+.sub{font-size:13px;color:var(--fog);margin-top:6px;font-family:'JetBrains Mono',monospace}
 
-/* STEP TRACK */
-.track{display:flex;margin-top:28px;background:var(--cream);border:1px solid var(--line);
-  border-radius:var(--r-md);overflow:hidden}
-.ts{flex:1;padding:9px 4px;text-align:center;font-size:9px;font-family:'JetBrains Mono',monospace;
-  letter-spacing:.5px;text-transform:uppercase;color:var(--fog);
-  border-right:1px solid var(--line);transition:all .3s;cursor:default}
-.ts:last-child{border-right:none}
-.ts .n{display:block;font-size:18px;font-weight:700;font-family:'Space Grotesk',sans-serif;
-  color:var(--line);margin-bottom:1px;transition:color .3s}
-.ts.active{background:var(--ink);color:var(--gold)}
-.ts.active .n{color:var(--gold)}
-.ts.done{background:rgba(42,124,111,.08);color:var(--teal)}
-.ts.done .n{color:var(--teal)}
+/* CARD */
+.card{background:var(--white);border:1px solid var(--line);border-radius:16px;
+  padding:22px 20px;margin-top:20px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 
-/* CARDS */
-.card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);
-  padding:22px 20px 20px;margin-bottom:14px;box-shadow:var(--shadow);transition:border-color .25s,box-shadow .25s}
-.card.lit{border-color:var(--gold);box-shadow:var(--shadow-lg),0 0 0 3px rgba(200,168,75,.10)}
-.card.lit-green{border-color:var(--teal);box-shadow:var(--shadow-lg),0 0 0 3px rgba(42,124,111,.10)}
-.card-lbl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;
-  text-transform:uppercase;color:var(--fog);margin-bottom:16px;
-  display:flex;align-items:center;gap:8px}
-.card-lbl::before{content:'';width:18px;height:1px;background:var(--line)}
+.lbl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--fog);margin-bottom:14px}
 
-/* DROP ZONE */
-.drop{border:2px dashed var(--line);border-radius:var(--r-md);padding:44px 20px;
-  text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--cream)}
+/* DROP */
+.drop{border:2px dashed var(--line);border-radius:10px;padding:48px 20px;
+  text-align:center;cursor:pointer;background:var(--cream);position:relative;transition:.2s}
 .drop:hover,.drop.over{border-color:var(--rust);background:rgba(192,82,42,.04)}
 .drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.drop-ico{font-size:44px;display:block;margin-bottom:10px}
-.drop-big{font-size:17px;font-weight:600;margin-bottom:4px}
+.drop-ico{font-size:40px;display:block;margin-bottom:10px}
+.drop-big{font-size:16px;font-weight:600;margin-bottom:4px}
 .drop-sm{font-size:11px;color:var(--fog);font-family:'JetBrains Mono',monospace}
-#vidPrev{display:none;width:100%;max-height:260px;border-radius:var(--r-md);
-  margin-top:16px;background:#000;box-shadow:var(--shadow)}
-.vid-meta{display:none;margin-top:10px;background:var(--paper);border-radius:var(--r-sm);
-  padding:9px 13px;gap:16px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;
-  font-size:11px;color:var(--fog)}
-.vid-meta strong{color:var(--ink)}
+
+video{width:100%;border-radius:10px;margin-top:14px;display:none;background:#000}
 
 /* NOTICE */
-.notice{background:rgba(42,124,111,.07);border:1px solid rgba(42,124,111,.2);
-  border-left:3px solid var(--teal);border-radius:var(--r-sm);padding:12px 14px;
-  font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--slate);
-  line-height:1.8;margin-bottom:14px}
-.notice strong{color:var(--teal)}
-.notice.warn{background:rgba(200,168,75,.07);border-color:rgba(200,168,75,.3);
-  border-left-color:var(--gold)}
-.notice.warn strong{color:#7a5f00}
-.notice.err{background:rgba(192,57,43,.06);border-color:rgba(192,57,43,.25);
-  border-left-color:var(--red)}
-.notice.err strong{color:var(--red)}
-
-/* FIELDS */
-.field-lbl{font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;
-  text-transform:uppercase;color:var(--fog);margin-bottom:5px}
-.lang-grid{display:grid;grid-template-columns:1fr 32px 1fr;gap:8px;align-items:end;margin-bottom:14px}
-.lang-arr{text-align:center;font-size:16px;color:var(--fog);padding-bottom:9px}
-select{width:100%;padding:10px 32px 10px 11px;background:var(--paper);border:1px solid var(--line);
-  border-radius:var(--r-sm);font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--ink);
-  cursor:pointer;appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239492a0'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 10px center;transition:border-color .2s}
-select:focus{outline:none;border-color:var(--gold)}
-.sliders{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
-.sl-row{display:flex;align-items:center;gap:8px;margin-top:5px}
-input[type=range]{flex:1;accent-color:var(--rust);cursor:pointer}
-.sl-val{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--rust);min-width:34px;text-align:right}
+.notice{padding:11px 14px;border-radius:8px;font-size:12px;
+  font-family:'JetBrains Mono',monospace;line-height:1.8;margin-bottom:12px}
+.notice.info{background:rgba(42,124,111,.07);border-left:3px solid var(--teal);color:#2a4a3f}
+.notice.warn{background:rgba(200,168,75,.08);border-left:3px solid var(--gold);color:#5a4200}
+.notice.err{background:rgba(192,57,43,.07);border-left:3px solid var(--red);color:var(--red);display:none}
 
 /* PIPELINE */
-.pipeline{display:flex;flex-direction:column;gap:5px;margin:14px 0}
-.pipe{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:var(--r-sm);
-  border:1px solid var(--line);background:var(--paper);font-size:13px;transition:all .3s;
-  position:relative;overflow:hidden}
+.pipeline{display:flex;flex-direction:column;gap:6px;margin:14px 0}
+.pipe{display:flex;align-items:center;gap:10px;padding:11px 13px;
+  border-radius:8px;border:1px solid var(--line);background:var(--paper);transition:.3s;position:relative;overflow:hidden}
 .pipe.run{background:rgba(200,168,75,.07);border-color:var(--gold)}
-.pipe.ok{background:rgba(42,124,111,.06);border-color:rgba(42,124,111,.35)}
-.pipe.fail{background:rgba(192,57,43,.06);border-color:rgba(192,57,43,.35)}
-.pipe-ico{font-size:16px;width:20px;text-align:center;flex-shrink:0}
-.pipe-lbl{flex:1;font-size:13px}
-.pipe-sub{font-size:10px;color:var(--fog);font-family:'JetBrains Mono',monospace;margin-top:1px}
-.pipe-st{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--fog);
-  text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;text-align:right;min-width:60px}
+.pipe.ok{background:rgba(42,124,111,.06);border-color:rgba(42,124,111,.4)}
+.pipe.fail{background:rgba(192,57,43,.06);border-color:rgba(192,57,43,.4)}
+.pipe-ico{font-size:15px;width:22px;text-align:center}
+.pipe-txt{flex:1;font-size:13px}
+.pipe-st{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--fog);min-width:60px;text-align:right}
 .pipe.run .pipe-st{color:var(--gold)}
 .pipe.ok .pipe-st{color:var(--teal)}
 .pipe.fail .pipe-st{color:var(--red)}
 .pipe.run::after{content:'';position:absolute;inset:0;
-  background:linear-gradient(90deg,transparent,rgba(200,168,75,.07),transparent);
-  animation:shimmer 1.6s ease-in-out infinite}
-@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+  background:linear-gradient(90deg,transparent,rgba(200,168,75,.08),transparent);
+  animation:sh 1.5s infinite}
+@keyframes sh{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-.spin{display:inline-block;width:11px;height:11px;border-radius:50%;
+.spin{display:inline-block;width:10px;height:10px;border-radius:50%;
   border:2px solid rgba(200,168,75,.3);border-top-color:var(--gold);
-  animation:spin .7s linear infinite;vertical-align:middle;margin-right:3px}
+  animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px}
 
-/* PROGRESS BAR */
-.prog-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-md);
-  padding:16px 18px;margin:10px 0;display:none}
-.prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.prog-title{font-size:13px;font-weight:600}
-.prog-pct{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--gold)}
-.prog-bar-bg{background:var(--line);border-radius:99px;height:6px;overflow:hidden;margin-bottom:6px}
-.prog-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--rust));
-  border-radius:99px;width:0%;transition:width .5s ease}
-.prog-row2{display:flex;justify-content:space-between;align-items:center}
-.prog-msg{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fog)}
-.prog-time{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fog)}
+/* PROGRESS */
+.prog{display:none;margin:12px 0}
+.prog-top{display:flex;justify-content:space-between;margin-bottom:6px}
+.prog-label{font-size:13px;font-weight:600}
+.prog-pct{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--gold)}
+.prog-bg{background:var(--line);border-radius:99px;height:5px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--rust));border-radius:99px;width:0%;transition:width .5s}
+.prog-msg{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fog);margin-top:5px}
 
-/* LIVE TRANSCRIPT */
-.tx-area{display:none;margin-top:12px}
-.tx-lbl{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--fog);
-  letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;
-  display:flex;align-items:center;justify-content:space-between}
-.tx-lbl .blink{display:inline-block;width:7px;height:7px;border-radius:50%;
-  background:var(--rust);animation:blink .8s ease-in-out infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-.tx-box{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:12px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.8;
-  min-height:52px;max-height:140px;overflow-y:auto;color:var(--ink);white-space:pre-wrap}
-.tx-box .interim{color:var(--fog);font-style:italic}
-.tx-box.tl{border-left:3px solid var(--teal)}
-
-/* PERMISSION GUIDE */
-.perm-guide{display:none;background:rgba(192,57,43,.05);border:1px solid rgba(192,57,43,.2);
-  border-radius:var(--r-md);padding:16px 18px;margin-top:10px}
-.perm-title{font-weight:700;font-size:14px;color:var(--red);margin-bottom:10px;
-  display:flex;align-items:center;gap:8px}
-.perm-steps{list-style:none;counter-reset:ps}
-.perm-steps li{counter-increment:ps;display:flex;align-items:flex-start;gap:10px;
-  padding:6px 0;font-size:13px;border-bottom:1px solid rgba(192,57,43,.1)}
-.perm-steps li:last-child{border-bottom:none}
-.perm-steps li::before{content:counter(ps);width:22px;height:22px;border-radius:50%;
-  background:var(--red);color:#fff;font-size:11px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.perm-btn-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+/* TRANSCRIPT */
+.tx{display:none;margin-top:12px}
+.tx-head{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--fog);margin-bottom:5px}
+.tx-box{background:var(--paper);border:1px solid var(--line);border-radius:6px;
+  padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;
+  line-height:1.8;max-height:130px;overflow-y:auto;white-space:pre-wrap}
+.tx-box.hi{border-left:3px solid var(--teal)}
 
 /* BUTTONS */
-.btn{padding:11px 20px;border-radius:var(--r-sm);font-family:'Space Grotesk',sans-serif;
+.btn{padding:11px 22px;border-radius:7px;font-family:'Space Grotesk',sans-serif;
   font-size:13px;font-weight:600;border:none;cursor:pointer;
-  display:inline-flex;align-items:center;gap:7px;transition:all .18s;letter-spacing:.3px}
-.btn-ink{background:var(--ink);color:var(--paper);box-shadow:0 2px 6px rgba(13,13,20,.25)}
-.btn-ink:hover:not(:disabled){background:var(--slate);transform:translateY(-1px)}
-.btn-ink:disabled{opacity:.3;cursor:not-allowed;transform:none}
-.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
-.btn-ghost:hover:not(:disabled){border-color:var(--ink);background:var(--cream)}
-.btn-red{background:var(--red);color:#fff;box-shadow:0 2px 6px rgba(192,57,43,.3)}
-.btn-red:hover:not(:disabled){background:#a93226;transform:translateY(-1px)}
-.btn-green{background:var(--teal);color:#fff;box-shadow:0 2px 8px rgba(42,124,111,.3)}
-.btn-green:hover:not(:disabled){background:#236358;transform:translateY(-1px)}
-.btn-sm{padding:7px 14px;font-size:12px}
-.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center}
+  display:inline-flex;align-items:center;gap:7px;transition:.18s}
+.btn-ink{background:var(--ink);color:var(--paper)}
+.btn-ink:hover:not(:disabled){background:#3d3d52;transform:translateY(-1px)}
+.btn-ink:disabled{opacity:.3;cursor:not-allowed}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--ink);background:var(--cream)}
+.btn-green{background:var(--teal);color:#fff}
+.btn-green:hover{background:#1e6358;transform:translateY(-1px)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 
 /* OUTPUT */
-.output-card{display:none}
-#outVid{width:100%;border-radius:var(--r-md);background:var(--ink);margin-top:12px;
-  box-shadow:var(--shadow-lg);border:1px solid var(--line)}
-.out-stats{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;
-  padding:10px 13px;background:var(--paper);border-radius:var(--r-sm);
+.output{display:none}
+.out-stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;
+  padding:10px 13px;background:var(--paper);border-radius:8px;
   font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fog)}
 .out-stats strong{color:var(--ink)}
-
-/* ERR BOX */
-.err-box{display:none;margin-top:10px;background:rgba(192,57,43,.07);
-  border:1px solid rgba(192,57,43,.25);border-radius:var(--r-sm);
-  padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;
-  color:var(--red);line-height:1.7}
-
-/* MODAL */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(13,13,20,.6);
-  z-index:1000;align-items:center;justify-content:center;padding:16px}
-.modal-bg.open{display:flex}
-.modal{background:var(--white);border-radius:var(--r-lg);padding:24px;
-  max-width:460px;width:100%;box-shadow:var(--shadow-lg)}
-.modal-title{font-size:18px;font-weight:700;margin-bottom:14px;
-  display:flex;align-items:center;gap:10px}
-.modal-close{margin-left:auto;background:none;border:none;font-size:20px;
-  cursor:pointer;color:var(--fog);padding:0}
-.cache-row{display:flex;align-items:center;justify-content:space-between;
-  padding:10px 0;border-bottom:1px solid var(--line)}
-.cache-row:last-child{border-bottom:none}
-.cache-key{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink)}
-.cache-size{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fog)}
-
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
-@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.rise{animation:rise .4s ease forwards}
-@media(max-width:520px){
-  .brand-name{font-size:34px}
-  .lang-grid{grid-template-columns:1fr}
-  .lang-arr{display:none}
-  .sliders{grid-template-columns:1fr}
-}
 </style>
 </head>
 <body>
 <div class="page">
 
-<!-- HEADER -->
-<header class="hdr">
-  <div class="hdr-row">
-    <div>
-      <div class="brand-eyebrow">Offline Dubbing Studio</div>
-      <div class="brand-name">Voice<em>Dub</em></div>
-      <div class="brand-sub">Transcribe · Translate · Synthesize — entirely in your browser</div>
-    </div>
-    <div class="badge-off">100% Offline</div>
-  </div>
-  <div class="track">
-    <div class="ts active" id="ts1"><span class="n">1</span>Upload</div>
-    <div class="ts" id="ts2"><span class="n">2</span>Settings</div>
-    <div class="ts" id="ts3"><span class="n">3</span>Process</div>
-    <div class="ts" id="ts4"><span class="n">4</span>Export</div>
-  </div>
-</header>
+<div style="margin-bottom:8px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--fog)">Video Dubbing Studio</div>
+<div class="brand">Voice<em>Dub</em></div>
+<div class="sub">Upload video → Auto transcribe → Translate to Hindi → Download</div>
 
-<!-- STEP 1: UPLOAD -->
-<div class="card lit rise" id="cardUpload">
-  <div class="card-lbl">Step 1 — Source Video</div>
-  <div class="notice">
-    <strong>Privacy First.</strong> Your video never leaves this device. All processing happens locally using the Web Speech API and browser audio APIs.
-  </div>
-  <div class="drop" id="dropZone">
-    <input type="file" id="vidFile" accept="video/*,audio/*">
+<!-- UPLOAD -->
+<div class="card">
+  <div class="lbl">Step 1 — Upload Video</div>
+  <div class="drop" id="drop">
+    <input type="file" id="fileIn" accept="video/*,audio/*">
     <span class="drop-ico">🎬</span>
-    <div class="drop-big">Drop video or audio here</div>
-    <div class="drop-sm">MP4 · MOV · AVI · MKV · WEBM · MP3 · WAV — up to 2 GB</div>
+    <div class="drop-big">Tap to select video</div>
+    <div class="drop-sm">MP4 · MOV · WEBM · MKV</div>
   </div>
-  <video id="vidPrev" controls></video>
-  <div class="vid-meta" id="vidMeta">
-    <span>📁 <strong id="mName">—</strong></span>
-    <span>⏱ <strong id="mDur">—</strong></span>
-    <span>📦 <strong id="mSize">—</strong></span>
-    <span>🎞 <strong id="mType">—</strong></span>
-  </div>
+  <video id="srcVid" controls></video>
   <div class="btn-row">
-    <button class="btn btn-ink" id="btnNext1" disabled onclick="goStep(2)">
-      Continue → Settings
-    </button>
+    <button class="btn btn-ink" id="btnStart" disabled onclick="startProcess()">▶ Transcribe & Dub to Hindi</button>
   </div>
 </div>
 
-<!-- STEP 2: SETTINGS -->
-<div class="card" id="cardSettings" style="display:none">
-  <div class="card-lbl">Step 2 — Language & Voice Settings</div>
-
-  <div class="notice warn">
-    <strong>Browser Speech API:</strong> VoiceDub uses the Web Speech API for recognition and synthesis. Available languages depend on your OS/browser voice packs. Install additional voices in your system settings for best results.
-  </div>
-
-  <div class="lang-grid">
-    <div>
-      <div class="field-lbl">Source Language</div>
-      <select id="srcLang"></select>
-    </div>
-    <div class="lang-arr">→</div>
-    <div>
-      <div class="field-lbl">Target Language</div>
-      <select id="tgtLang"></select>
-    </div>
-  </div>
-
-  <div class="field-lbl" style="margin-top:8px">Output Voice</div>
-  <select id="voiceSel">
-    <option value="">— loading voices —</option>
-  </select>
-
-  <div class="sliders">
-    <div>
-      <div class="field-lbl">Speech Rate</div>
-      <div class="sl-row">
-        <input type="range" id="rateRng" min="0.5" max="2" step="0.05" value="1">
-        <span class="sl-val" id="rateVal">1.0×</span>
-      </div>
-    </div>
-    <div>
-      <div class="field-lbl">Pitch</div>
-      <div class="sl-row">
-        <input type="range" id="pitchRng" min="0.5" max="2" step="0.05" value="1">
-        <span class="sl-val" id="pitchVal">1.0</span>
-      </div>
-    </div>
-    <div>
-      <div class="field-lbl">Volume Mix (dub %)</div>
-      <div class="sl-row">
-        <input type="range" id="volRng" min="0" max="100" value="100">
-        <span class="sl-val" id="volVal">100%</span>
-      </div>
-    </div>
-    <div>
-      <div class="field-lbl">Original Audio</div>
-      <div class="sl-row">
-        <input type="range" id="origRng" min="0" max="100" value="10">
-        <span class="sl-val" id="origVal">10%</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="btn-row">
-    <button class="btn btn-ghost btn-sm" onclick="goStep(1)">← Back</button>
-    <button class="btn btn-ink" onclick="goStep(3)">Continue → Process</button>
-    <button class="btn btn-ghost btn-sm" onclick="testVoice()">🔊 Test Voice</button>
-  </div>
-</div>
-
-<!-- STEP 3: PROCESS -->
+<!-- PROCESS -->
 <div class="card" id="cardProcess" style="display:none">
-  <div class="card-lbl">Step 3 — Dubbing Pipeline</div>
+  <div class="lbl">Step 2 — Processing</div>
 
-  <!-- Mic permission guide -->
-  <div class="perm-guide" id="permGuide">
-    <div class="perm-title">🎙 Microphone Permission Required</div>
-    <p style="font-size:13px;margin-bottom:10px;">VoiceDub needs mic access to process the audio from your video using the Web Speech API.</p>
-    <ul class="perm-steps">
-      <li>Click <strong>Allow</strong> in the browser permission popup</li>
-      <li>If blocked: click the 🔒 icon in the address bar → Site Settings → Allow Microphone</li>
-      <li>Reload this page, then click Start Dubbing again</li>
-    </ul>
-    <div class="perm-btn-row">
-      <button class="btn btn-ink btn-sm" onclick="startDub()">🔄 Retry</button>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('permGuide').style.display='none'">Dismiss</button>
-    </div>
+  <div class="notice warn" id="noticeWarn">
+    <strong>Note:</strong> This uses your browser's built-in Speech API to transcribe the video audio. Chrome works best. Keep the tab open during processing.
   </div>
+  <div class="notice err" id="errBox"></div>
 
-  <!-- Pipeline steps -->
   <div class="pipeline">
-    <div class="pipe" id="pipe1">
-      <span class="pipe-ico">🎵</span>
-      <div class="pipe-lbl">Extract audio from video<div class="pipe-sub">Web Audio API · MediaElement</div></div>
-      <span class="pipe-st" id="pst1">waiting</span>
-    </div>
-    <div class="pipe" id="pipe2">
-      <span class="pipe-ico">🗣</span>
-      <div class="pipe-lbl">Speech recognition<div class="pipe-sub">Web Speech API · continuous mode</div></div>
-      <span class="pipe-st" id="pst2">waiting</span>
-    </div>
-    <div class="pipe" id="pipe3">
-      <span class="pipe-ico">🌐</span>
-      <div class="pipe-lbl">Translation<div class="pipe-sub">MyMemory API (free · offline fallback)</div></div>
-      <span class="pipe-st" id="pst3">waiting</span>
-    </div>
-    <div class="pipe" id="pipe4">
-      <span class="pipe-ico">🔊</span>
-      <div class="pipe-lbl">Speech synthesis & mixing<div class="pipe-sub">Web Speech Synthesis · AudioContext</div></div>
-      <span class="pipe-st" id="pst4">waiting</span>
-    </div>
-    <div class="pipe" id="pipe5">
-      <span class="pipe-ico">💾</span>
-      <div class="pipe-lbl">Encode & mux output<div class="pipe-sub">MediaRecorder · WebM/Opus</div></div>
-      <span class="pipe-st" id="pst5">waiting</span>
-    </div>
+    <div class="pipe" id="p1"><span class="pipe-ico">🎵</span><span class="pipe-txt">Load video audio</span><span class="pipe-st" id="s1">waiting</span></div>
+    <div class="pipe" id="p2"><span class="pipe-ico">🗣</span><span class="pipe-txt">Transcribe speech (Web Speech API)</span><span class="pipe-st" id="s2">waiting</span></div>
+    <div class="pipe" id="p3"><span class="pipe-ico">🌐</span><span class="pipe-txt">Translate to Hindi</span><span class="pipe-st" id="s3">waiting</span></div>
+    <div class="pipe" id="p4"><span class="pipe-ico">🔊</span><span class="pipe-txt">Synthesize Hindi voice (TTS)</span><span class="pipe-st" id="s4">waiting</span></div>
+    <div class="pipe" id="p5"><span class="pipe-ico">💾</span><span class="pipe-txt">Build output file</span><span class="pipe-st" id="s5">waiting</span></div>
   </div>
 
-  <!-- Progress -->
-  <div class="prog-card" id="progCard">
-    <div class="prog-top">
-      <div class="prog-title" id="progTitle">Processing…</div>
-      <div class="prog-pct" id="progPct">0%</div>
-    </div>
-    <div class="prog-bar-bg"><div class="prog-bar-fill" id="progFill"></div></div>
-    <div class="prog-row2">
-      <div class="prog-msg" id="progMsg">Initialising…</div>
-      <div class="prog-time" id="progTime">—</div>
-    </div>
+  <div class="prog" id="prog">
+    <div class="prog-top"><span class="prog-label">Progress</span><span class="prog-pct" id="progPct">0%</span></div>
+    <div class="prog-bg"><div class="prog-fill" id="progFill"></div></div>
+    <div class="prog-msg" id="progMsg">Starting…</div>
   </div>
 
-  <!-- Live transcription -->
-  <div class="tx-area" id="txArea">
-    <div class="tx-lbl">Live Transcript <span class="blink"></span></div>
-    <div class="tx-box" id="txBox"></div>
+  <div class="tx" id="txSrc">
+    <div class="tx-head">Original Transcript</div>
+    <div class="tx-box" id="txSrcBox"></div>
   </div>
-
-  <!-- Live translation -->
-  <div class="tx-area" id="tlArea" style="margin-top:8px">
-    <div class="tx-lbl">Live Translation <span class="blink" style="background:var(--teal)"></span></div>
-    <div class="tx-box tl" id="tlBox"></div>
-  </div>
-
-  <div class="err-box" id="errBox"></div>
-
-  <div class="btn-row">
-    <button class="btn btn-ink" id="btnDub" onclick="startDub()">▶ Start Dubbing</button>
-    <button class="btn btn-red" id="btnStop" style="display:none" onclick="stopDub()">⏹ Stop</button>
-    <button class="btn btn-ghost btn-sm" onclick="goStep(2)">← Back</button>
+  <div class="tx" id="txHi" style="margin-top:8px">
+    <div class="tx-head">Hindi Translation</div>
+    <div class="tx-box hi" id="txHiBox"></div>
   </div>
 </div>
 
-<!-- STEP 4: EXPORT -->
-<div class="card output-card lit-green rise" id="cardExport">
-  <div class="card-lbl">Step 4 — Export</div>
-  <div class="notice" style="margin-bottom:12px">
-    <strong>Done!</strong> Your dubbed video is ready. Preview it below then download.
-  </div>
-  <video id="outVid" controls></video>
+<!-- OUTPUT -->
+<div class="card output" id="cardOut">
+  <div class="lbl">Step 3 — Done!</div>
+  <div class="notice info">Your video has been dubbed into Hindi. Preview and download below.</div>
+  <video id="outVid" controls style="display:block;margin-top:0"></video>
   <div class="out-stats" id="outStats"></div>
   <div class="btn-row">
     <button class="btn btn-green" id="btnDl">⬇ Download Dubbed Video</button>
-    <button class="btn btn-ghost btn-sm" onclick="resetAll()">↺ New Video</button>
+    <button class="btn btn-ghost" onclick="resetAll()">↺ New Video</button>
   </div>
-
-  <!-- Transcript save -->
-  <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:16px">
-    <div class="card-lbl">Export Transcript</div>
-    <div class="btn-row" style="margin-top:8px">
-      <button class="btn btn-ghost btn-sm" onclick="saveTxt('src')">📄 Source .txt</button>
-      <button class="btn btn-ghost btn-sm" onclick="saveTxt('tgt')">📄 Translation .txt</button>
-      <button class="btn btn-ghost btn-sm" onclick="saveSrt()">🎞 .SRT Subtitles</button>
-    </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" style="font-size:12px;padding:8px 14px" onclick="saveSrt()">🎞 Download .SRT Subtitles</button>
+    <button class="btn btn-ghost" style="font-size:12px;padding:8px 14px" onclick="saveTxt()">📄 Download Hindi Text</button>
   </div>
 </div>
 
-</div><!-- /page -->
-
-<!-- MODAL: cache -->
-<div class="modal-bg" id="cacheModal">
-  <div class="modal">
-    <div class="modal-title">💾 Translation Cache <button class="modal-close" onclick="closeModal()">×</button></div>
-    <div id="cacheList"><em style="font-size:13px;color:var(--fog)">No cache entries yet.</em></div>
-    <div class="btn-row" style="margin-top:16px">
-      <button class="btn btn-red btn-sm" onclick="clearCache()">Clear Cache</button>
-      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>
-    </div>
-  </div>
 </div>
 
 <script>
-// ─── STATE ────────────────────────────────────────────────────────────────────
-const S = {
-  file: null, videoURL: null,
-  recognition: null, synthesis: window.speechSynthesis,
-  voices: [],
-  srcTranscript: [], tgtTranscript: [],
-  segments: [],       // {start, end, src, tgt, utterance}
-  recording: false,
-  mediaRecorder: null,
-  recordedChunks: [],
-  outputURL: null,
+// ── STATE ──
+const ST = {
+  file: null,
+  srcURL: null,
+  segments: [],     // {start_ms, end_ms, src, hi}
   outputBlob: null,
-  startTime: 0,
-  timerInterval: null,
-  translCache: JSON.parse(localStorage.getItem('vd_cache') || '{}'),
+  outputURL: null,
+  chunks: [],
+  startedAt: 0,
 };
 
-// ─── LANGUAGE LIST ────────────────────────────────────────────────────────────
-const LANGS = [
-  ['en-US','English (US)'],['en-GB','English (UK)'],
-  ['es-ES','Spanish (Spain)'],['es-MX','Spanish (Mexico)'],
-  ['fr-FR','French'],['de-DE','German'],['it-IT','Italian'],
-  ['pt-BR','Portuguese (Brazil)'],['pt-PT','Portuguese (Portugal)'],
-  ['ru-RU','Russian'],['zh-CN','Chinese (Simplified)'],['zh-TW','Chinese (Traditional)'],
-  ['ja-JP','Japanese'],['ko-KR','Korean'],['ar-SA','Arabic'],
-  ['hi-IN','Hindi'],['tr-TR','Turkish'],['pl-PL','Polish'],
-  ['nl-NL','Dutch'],['sv-SE','Swedish'],['da-DK','Danish'],
-  ['fi-FI','Finnish'],['nb-NO','Norwegian'],['cs-CZ','Czech'],
-  ['sk-SK','Slovak'],['ro-RO','Romanian'],['hu-HU','Hungarian'],
-  ['el-GR','Greek'],['uk-UA','Ukrainian'],['id-ID','Indonesian'],
-  ['ms-MY','Malay'],['vi-VN','Vietnamese'],['th-TH','Thai'],
-  ['he-IL','Hebrew'],['fa-IR','Persian'],
-];
+// ── FILE PICK ──
+const drop = document.getElementById('drop');
+drop.addEventListener('dragover', e=>{e.preventDefault();drop.classList.add('over')});
+drop.addEventListener('dragleave', ()=>drop.classList.remove('over'));
+drop.addEventListener('drop', e=>{e.preventDefault();drop.classList.remove('over');pick(e.dataTransfer.files[0])});
+document.getElementById('fileIn').addEventListener('change', e=>pick(e.target.files[0]));
 
-function populateLangs(){
-  const src = document.getElementById('srcLang');
-  const tgt = document.getElementById('tgtLang');
-  LANGS.forEach(([code,name])=>{
-    src.innerHTML += `<option value="${code}">${name}</option>`;
-    tgt.innerHTML += `<option value="${code}">${name}</option>`;
-  });
-  src.value = 'en-US';
-  tgt.value = 'es-ES';
+function pick(f){
+  if(!f) return;
+  ST.file = f;
+  if(ST.srcURL) URL.revokeObjectURL(ST.srcURL);
+  ST.srcURL = URL.createObjectURL(f);
+  const v = document.getElementById('srcVid');
+  v.src = ST.srcURL;
+  v.style.display = 'block';
+  document.getElementById('btnStart').disabled = false;
 }
 
-// ─── VOICES ───────────────────────────────────────────────────────────────────
-function loadVoices(){
-  const all = S.synthesis.getVoices();
-  S.voices = all;
-  const sel = document.getElementById('voiceSel');
-  const tgt = document.getElementById('tgtLang').value;
-  sel.innerHTML = '';
-  const filtered = all.filter(v=>v.lang.startsWith(tgt.slice(0,2)));
-  const rest = all.filter(v=>!v.lang.startsWith(tgt.slice(0,2)));
-  [...filtered,...rest].forEach(v=>{
-    sel.innerHTML += `<option value="${v.name}">[${v.lang}] ${v.name}${v.localService?' ●':''}</option>`;
-  });
-  if(!sel.options.length) sel.innerHTML = '<option>No voices found — install OS voices</option>';
-}
-populateLangs();
-if(speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
-loadVoices();
-document.getElementById('tgtLang').addEventListener('change', loadVoices);
-
-// ─── SLIDERS ──────────────────────────────────────────────────────────────────
-function wire(id, valId, fmt){
-  const el = document.getElementById(id);
-  const vl = document.getElementById(valId);
-  el.addEventListener('input',()=>vl.textContent=fmt(el.value));
-}
-wire('rateRng','rateVal', v=>parseFloat(v).toFixed(2)+'×');
-wire('pitchRng','pitchVal', v=>parseFloat(v).toFixed(2));
-wire('volRng','volVal', v=>v+'%');
-wire('origRng','origVal', v=>v+'%');
-
-// ─── DRAG-DROP ────────────────────────────────────────────────────────────────
-const dropZone = document.getElementById('dropZone');
-dropZone.addEventListener('dragover', e=>{e.preventDefault();dropZone.classList.add('over')});
-dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('over'));
-dropZone.addEventListener('drop', e=>{
-  e.preventDefault();dropZone.classList.remove('over');
-  const f = e.dataTransfer.files[0];
-  if(f) handleFile(f);
-});
-document.getElementById('vidFile').addEventListener('change', e=>{
-  if(e.target.files[0]) handleFile(e.target.files[0]);
-});
-
-function handleFile(f){
-  S.file = f;
-  S.videoURL = URL.createObjectURL(f);
-  const vid = document.getElementById('vidPrev');
-  vid.src = S.videoURL;
-  vid.style.display = 'block';
-  // meta
-  const meta = document.getElementById('vidMeta');
-  meta.style.display = 'flex';
-  document.getElementById('mName').textContent = f.name;
-  document.getElementById('mSize').textContent = fmtBytes(f.size);
-  document.getElementById('mType').textContent = f.type || 'unknown';
-  vid.addEventListener('loadedmetadata', ()=>{
-    document.getElementById('mDur').textContent = fmtTime(vid.duration);
-  },{once:true});
-  document.getElementById('btnNext1').disabled = false;
-}
-
-// ─── STEP NAV ─────────────────────────────────────────────────────────────────
-function goStep(n){
-  const cards = ['cardUpload','cardSettings','cardProcess','cardExport'];
-  const show = [null,'cardUpload','cardSettings','cardProcess','cardExport'];
-  cards.forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.style.display = 'none';
-  });
-  const target = document.getElementById(show[n]);
-  if(target){ target.style.display='block'; target.scrollIntoView({behavior:'smooth',block:'start'}); }
-
-  // track
-  for(let i=1;i<=4;i++){
-    const t = document.getElementById('ts'+i);
-    t.className = 'ts' + (i<n?' done':(i===n?' active':''));
-  }
-
-  if(n===2) loadVoices();
-}
-
-// ─── TEST VOICE ───────────────────────────────────────────────────────────────
-function testVoice(){
-  S.synthesis.cancel();
-  const u = new SpeechSynthesisUtterance('Hello! This is a voice test for VoiceDub.');
-  applyVoiceSettings(u);
-  S.synthesis.speak(u);
-}
-
-function applyVoiceSettings(u){
-  const vn = document.getElementById('voiceSel').value;
-  const v = S.voices.find(x=>x.name===vn);
-  if(v) u.voice = v;
-  u.rate = parseFloat(document.getElementById('rateRng').value);
-  u.pitch = parseFloat(document.getElementById('pitchRng').value);
-  u.volume = parseFloat(document.getElementById('volRng').value)/100;
-  u.lang = document.getElementById('tgtLang').value;
-}
-
-// ─── TRANSLATION ──────────────────────────────────────────────────────────────
-async function translate(text, from, to){
-  const key = `${from}|${to}|${text}`;
-  if(S.translCache[key]) return S.translCache[key];
+// ── TRANSLATE via MyMemory ──
+const cache = {};
+async function translate(text){
+  if(!text.trim()) return '';
+  const k = text.trim();
+  if(cache[k]) return cache[k];
   try{
-    const sl = from.slice(0,2), tl = to.slice(0,2);
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sl}|${tl}`;
-    const r = await fetch(url, {signal:AbortSignal.timeout(6000)});
+    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(k)}&langpair=en|hi`,{signal:AbortSignal.timeout(8000)});
     const d = await r.json();
-    const result = d.responseData?.translatedText || text;
-    S.translCache[key] = result;
-    localStorage.setItem('vd_cache', JSON.stringify(S.translCache));
-    return result;
-  } catch(e){
-    return text; // fallback: return original
-  }
+    const t = d.responseData?.translatedText || k;
+    cache[k] = t;
+    return t;
+  }catch{ return k; }
 }
 
-// ─── MAIN DUB ─────────────────────────────────────────────────────────────────
-async function startDub(){
-  hideErr();
-  document.getElementById('permGuide').style.display='none';
-
-  if(!S.file){ showErr('No file loaded.'); return; }
-
-  // Reset state
-  S.srcTranscript=[];S.tgtTranscript=[];S.segments=[];
-  S.recordedChunks=[];S.recording=true;
-  document.getElementById('txBox').textContent='';
-  document.getElementById('tlBox').textContent='';
-
-  pipeReset();
-  document.getElementById('progCard').style.display='block';
-  document.getElementById('txArea').style.display='block';
-  document.getElementById('tlArea').style.display='block';
-  document.getElementById('btnDub').style.display='none';
-  document.getElementById('btnStop').style.display='inline-flex';
-
-  S.startTime=Date.now();
-  setProgress(0,'Initialising pipeline…');
-
-  // PIPE 1: load video
-  pipeRun(1);
-  setProgress(5,'Loading video…');
-  const vid = document.getElementById('vidPrev');
-  vid.src = S.videoURL;
-  vid.muted = false;
-  await new Promise((res,rej)=>{
-    vid.onloadedmetadata=res;
-    vid.onerror=rej;
-  }).catch(()=>null);
-  const dur = vid.duration || 0;
-  pipeOk(1);
-  setProgress(10,'Audio ready');
-
-  // PIPE 2: set up speech recognition
-  pipeRun(2);
-  if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)){
-    pipeError(2,'Not supported');
-    showErr('❌ Your browser does not support the Web Speech API.\n\nPlease use Google Chrome or Microsoft Edge.');
-    stopDub();return;
-  }
-
-  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const rec = new SpeechRec();
-  S.recognition = rec;
-  rec.continuous = true;
-  rec.interimResults = true;
-  rec.lang = document.getElementById('srcLang').value;
-  rec.maxAlternatives = 1;
-
-  // Set up MediaRecorder on AudioContext mix
-  let stream, audioCtx, dest, mRecorder;
-  try{
-    // We need mic to re-route audio through Speech API
-    stream = await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-  } catch(e){
-    pipeError(2,'Mic denied');
-    document.getElementById('permGuide').style.display='block';
-    document.getElementById('btnDub').style.display='inline-flex';
-    document.getElementById('btnStop').style.display='none';
-    stopDub();return;
-  }
-
-  // Build audio graph: video + synthesised TTS → mix → recorder
-  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  dest = audioCtx.createMediaStreamDestination();
-
-  // Original video audio (low volume)
-  const vidSrc = audioCtx.createMediaElementSource(vid);
-  const vidGain = audioCtx.createGain();
-  vidGain.gain.value = parseFloat(document.getElementById('origRng').value)/100;
-  vidSrc.connect(vidGain);
-  vidGain.connect(dest);
-  vidGain.connect(audioCtx.destination);
-
-  // We'll add TTS utterances dynamically via oscillator trick
-  // MediaRecorder on video canvas + audio dest stream
-  let videoStream;
-  try{
-    const canvas = document.createElement('canvas');
-    canvas.width=640;canvas.height=360;
-    const ctx2 = canvas.getContext('2d');
-    ctx2.fillStyle='#0d0d14';
-    ctx2.fillRect(0,0,640,360);
-    ctx2.fillStyle='#c8a84b';
-    ctx2.font='bold 36px sans-serif';
-    ctx2.textAlign='center';
-    ctx2.fillText('VoiceDub',320,160);
-    ctx2.fillStyle='#9492a0';
-    ctx2.font='16px monospace';
-    ctx2.fillText('Dubbed with VoiceDub (offline)',320,200);
-    videoStream = canvas.captureStream(25);
-  } catch(e){
-    videoStream = new MediaStream();
-  }
-
-  // Combine video stream + audio dest
-  const combined = new MediaStream([
-    ...videoStream.getVideoTracks(),
-    ...dest.stream.getAudioTracks()
-  ]);
-
-  const mimeTypes=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','audio/webm'];
-  const mime = mimeTypes.find(m=>MediaRecorder.isTypeSupported(m))||'';
-
-  mRecorder = S.mediaRecorder = new MediaRecorder(combined, mime?{mimeType:mime}:{});
-  mRecorder.ondataavailable = e=>{ if(e.data.size>0) S.recordedChunks.push(e.data); };
-  mRecorder.start(500);
-
-  pipeOk(2);
-  setProgress(20,'Recognition active');
-
-  // PIPE 3: translation
-  pipeRun(3);
-  setProgress(25,'Translation ready (MyMemory API)');
-
-  let finalText='', interimText='';
-
-  rec.onresult = async(e)=>{
-    let iText='', fText='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const t = e.results[i][0].transcript;
-      if(e.results[i].isFinal) fText+=t+' ';
-      else iText+=t;
-    }
-
-    if(fText){
-      finalText += fText;
-      const t = fText.trim();
-      S.srcTranscript.push(t);
-      const seg = {start:Date.now()-S.startTime, src:t};
-
-      // Translate
-      pipeRun(3);
-      const translated = await translate(t, rec.lang, document.getElementById('tgtLang').value);
-      seg.tgt = translated;
-      seg.end = Date.now()-S.startTime;
-      S.tgtTranscript.push(translated);
-      S.segments.push(seg);
-      pipeOk(3);
-
-      // Update transcript boxes
-      document.getElementById('txBox').textContent = S.srcTranscript.join('\n');
-      document.getElementById('tlBox').textContent = S.tgtTranscript.join('\n');
-
-      // PIPE 4: TTS
-      pipeRun(4);
-      const u = new SpeechSynthesisUtterance(translated);
-      applyVoiceSettings(u);
-      S.synthesis.speak(u);
-      u.onend = ()=>pipeOk(4);
-    }
-
-    // Interim
-    interimText = iText;
-    const box = document.getElementById('txBox');
-    const base = S.srcTranscript.join('\n');
-    box.textContent = base + (iText ? '\n'+iText : '');
-  };
-
-  rec.onerror = e=>{
-    if(e.error==='not-allowed'){
-      document.getElementById('permGuide').style.display='block';
-    }
-    showErr('Recognition error: '+e.error);
-    stopDub();
-  };
-
-  rec.onend = ()=>{
-    if(S.recording) rec.start(); // restart for continuous
-  };
-
-  // PIPE 5: recording
-  pipeRun(5);
-
-  // Start video playback
-  vid.currentTime=0;
-  vid.playbackRate=1;
-  try{ await vid.play(); }catch(e){ /* autoplay blocked */ }
-
-  rec.start();
-
-  setProgress(30,'Transcribing & dubbing…');
-
-  // Progress ticker
-  S.timerInterval = setInterval(()=>{
-    if(!S.recording){clearInterval(S.timerInterval);return;}
-    const elapsed = (Date.now()-S.startTime)/1000;
-    const pct = dur>0 ? Math.min(95, 30 + (elapsed/dur)*65) : 30;
-    setProgress(Math.round(pct), `Live dubbing — ${fmtTime(elapsed)} elapsed`, fmtTime(dur));
-  }, 1000);
-
-  // Auto stop when video ends
-  vid.onended = ()=>{
-    if(S.recording) stopDub();
-  };
-}
-
-async function stopDub(){
-  S.recording = false;
-  clearInterval(S.timerInterval);
-
-  if(S.recognition){ try{S.recognition.stop();}catch(e){} S.recognition=null; }
-  S.synthesis.cancel();
-
-  const vid = document.getElementById('vidPrev');
-  try{vid.pause();}catch(e){}
-
-  setProgress(96,'Finalising recording…');
-  pipeOk(5);
-
-  document.getElementById('btnStop').style.display='none';
-  document.getElementById('btnDub').style.display='inline-flex';
-
-  if(S.mediaRecorder && S.mediaRecorder.state!=='inactive'){
-    await new Promise(res=>{
-      S.mediaRecorder.onstop=res;
-      S.mediaRecorder.stop();
-    });
-  }
-
-  setProgress(100,'Done!');
-
-  // Build output blob
-  if(S.recordedChunks.length){
-    const mime = S.mediaRecorder?.mimeType||'video/webm';
-    const blob = new Blob(S.recordedChunks,{type:mime});
-    S.outputBlob = blob;
-    S.outputURL = URL.createObjectURL(blob);
-
-    const outVid = document.getElementById('outVid');
-    outVid.src = S.outputURL;
-
-    document.getElementById('outStats').innerHTML = `
-      <span>📦 Size: <strong>${fmtBytes(blob.size)}</strong></span>
-      <span>🎙 Segments: <strong>${S.segments.length}</strong></span>
-      <span>⏱ Duration: <strong>${fmtTime((Date.now()-S.startTime)/1000)}</strong></span>
-      <span>📝 Words: <strong>${S.srcTranscript.join(' ').split(/\s+/).filter(Boolean).length}</strong></span>
-    `;
-
-    document.getElementById('btnDl').onclick = ()=>dlBlob(blob, 'VoiceDub_'+Date.now()+'.webm');
-
-    document.getElementById('cardExport').style.display='block';
-    document.getElementById('cardExport').scrollIntoView({behavior:'smooth'});
-    goStep(4);
-  } else {
-    showErr('No audio was recorded. Check that your browser supports MediaRecorder and mic access.');
-  }
-}
-
-// ─── PIPE HELPERS ─────────────────────────────────────────────────────────────
-function pipeReset(){
-  for(let i=1;i<=5;i++){
-    const p=document.getElementById('pipe'+i);
-    const s=document.getElementById('pst'+i);
-    p.className='pipe';s.textContent='waiting';
-  }
-}
-function pipeRun(n){
-  const p=document.getElementById('pipe'+n);
-  const s=document.getElementById('pst'+n);
-  p.className='pipe run';
-  s.innerHTML='<span class="spin"></span>running';
-}
-function pipeOk(n){
-  const p=document.getElementById('pipe'+n);
-  const s=document.getElementById('pst'+n);
-  p.className='pipe ok';s.textContent='✓ done';
-}
-function pipeError(n,msg){
-  const p=document.getElementById('pipe'+n);
-  const s=document.getElementById('pst'+n);
-  p.className='pipe fail';s.textContent='✗ '+msg;
-}
-
-// ─── PROGRESS ─────────────────────────────────────────────────────────────────
-function setProgress(pct, msg, time){
+// ── PIPELINE HELPERS ──
+function pRun(n){document.getElementById('p'+n).className='pipe run';document.getElementById('s'+n).innerHTML='<span class="spin"></span>running'}
+function pOk(n){document.getElementById('p'+n).className='pipe ok';document.getElementById('s'+n).textContent='✓ done'}
+function pFail(n,m){document.getElementById('p'+n).className='pipe fail';document.getElementById('s'+n).textContent='✗ '+m}
+function setP(pct,msg){
   document.getElementById('progPct').textContent=pct+'%';
   document.getElementById('progFill').style.width=pct+'%';
-  if(msg) document.getElementById('progMsg').textContent=msg;
-  if(time) document.getElementById('progTime').textContent=time;
-  else document.getElementById('progTime').textContent = fmtTime((Date.now()-(S.startTime||Date.now()))/1000);
-}
-
-// ─── EXPORT TRANSCRIPTS ───────────────────────────────────────────────────────
-function saveTxt(which){
-  const lines = which==='src' ? S.srcTranscript : S.tgtTranscript;
-  if(!lines.length){alert('Nothing to export yet.');return;}
-  const blob = new Blob([lines.join('\n\n')],{type:'text/plain'});
-  dlBlob(blob, `VoiceDub_${which==='src'?'source':'translation'}.txt`);
-}
-function saveSrt(){
-  if(!S.segments.length){alert('No segments yet.');return;}
-  let srt='';
-  S.segments.forEach((seg,i)=>{
-    srt+=`${i+1}\n${msToSrt(seg.start)} --> ${msToSrt(seg.end)}\n${seg.tgt||seg.src}\n\n`;
-  });
-  dlBlob(new Blob([srt],{type:'text/plain'}), 'VoiceDub.srt');
-}
-function msToSrt(ms){
-  const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60);
-  const fr=String(ms%1000).padStart(3,'0');
-  return `${pad(h)}:${pad(m%60)}:${pad(s%60)},${fr}`;
-}
-function pad(n){return String(n).padStart(2,'0')}
-
-// ─── CACHE ────────────────────────────────────────────────────────────────────
-function showCache(){
-  const keys=Object.keys(S.translCache);
-  const list=document.getElementById('cacheList');
-  if(!keys.length){list.innerHTML='<em style="font-size:13px;color:var(--fog)">No cache entries yet.</em>';return;}
-  list.innerHTML=keys.slice(-20).map(k=>{
-    const parts=k.split('|');
-    return `<div class="cache-row"><span class="cache-key">${parts[0]}→${parts[1]}: ${parts[2]?.slice(0,30)}…</span><span class="cache-size">${S.translCache[k]?.slice(0,20)}…</span></div>`;
-  }).join('');
-  document.getElementById('cacheModal').classList.add('open');
-}
-function closeModal(){document.getElementById('cacheModal').classList.remove('open')}
-function clearCache(){S.translCache={};localStorage.removeItem('vd_cache');closeModal();}
-
-// ─── UTILS ────────────────────────────────────────────────────────────────────
-function fmtBytes(b){
-  if(b<1024) return b+'B';
-  if(b<1024*1024) return (b/1024).toFixed(1)+'KB';
-  return (b/1024/1024).toFixed(1)+'MB';
-}
-function fmtTime(s){
-  s=Math.floor(s||0);
-  const m=Math.floor(s/60);
-  return `${m}:${String(s%60).padStart(2,'0')}`;
-}
-function dlBlob(blob, name){
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  document.getElementById('progMsg').textContent=msg;
 }
 function showErr(msg){
   const b=document.getElementById('errBox');
   b.textContent=msg;b.style.display='block';
 }
-function hideErr(){document.getElementById('errBox').style.display='none'}
+
+// ── MAIN ──
+async function startProcess(){
+  if(!ST.file) return;
+  document.getElementById('cardProcess').style.display='block';
+  document.getElementById('cardProcess').scrollIntoView({behavior:'smooth'});
+  document.getElementById('prog').style.display='block';
+  document.getElementById('btnStart').disabled=true;
+  ST.segments=[];ST.chunks=[];ST.startedAt=Date.now();
+
+  // PIPE 1: load video
+  pRun(1);setP(5,'Loading video…');
+  const vid = document.getElementById('srcVid');
+  vid.src = ST.srcURL;
+  await new Promise(r=>{vid.onloadedmetadata=r});
+  const duration = vid.duration;
+  pOk(1);setP(10,'Video loaded — '+fmt(duration));
+
+  // Check Speech API
+  if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)){
+    pFail(2,'not supported');
+    showErr('❌ Web Speech API not supported.\n\nPlease open this page in Google Chrome.');
+    return;
+  }
+
+  // PIPE 2: Transcribe by playing video and recognising
+  pRun(2);setP(15,'Starting transcription…');
+  document.getElementById('txSrc').style.display='block';
+  document.getElementById('txHi').style.display='block';
+
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SpeechRec();
+  rec.lang = 'en-US';
+  rec.continuous = true;
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+
+  // Audio context to pipe video audio into MediaRecorder (for output)
+  const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  const dest = audioCtx.createMediaStreamDestination();
+
+  // Video audio → dest (original, muted low)
+  const vidSrc = audioCtx.createMediaElementSource(vid);
+  const origGain = audioCtx.createGain();
+  origGain.gain.value = 0.08; // keep original very low under dub
+  vidSrc.connect(origGain);
+  origGain.connect(dest);
+  origGain.connect(audioCtx.destination); // so Speech API can hear it
+
+  // TTS node pool
+  const ttsGain = audioCtx.createGain();
+  ttsGain.gain.value = 1.0;
+  ttsGain.connect(dest);
+  ttsGain.connect(audioCtx.destination);
+
+  // MediaRecorder for output audio
+  const mime = ['audio/webm;codecs=opus','audio/webm','audio/ogg'].find(m=>MediaRecorder.isTypeSupported(m))||'';
+  const mr = new MediaRecorder(dest.stream, mime?{mimeType:mime}:{});
+  mr.ondataavailable = e=>{ if(e.data.size>0) ST.chunks.push(e.data) };
+  mr.start(300);
+
+  // Transcription result handler
+  const synth = window.speechSynthesis;
+
+  rec.onresult = async(e)=>{
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(!e.results[i].isFinal) continue;
+      const src = e.results[i][0].transcript.trim();
+      if(!src) continue;
+      const tMs = Math.round((vid.currentTime)*1000);
+
+      // Show source
+      ST.segments.push({start_ms:tMs, src, hi:''});
+      document.getElementById('txSrcBox').textContent = ST.segments.map(s=>s.src).join('\n');
+
+      // PIPE 3: translate
+      pRun(3);
+      const hi = await translate(src);
+      ST.segments[ST.segments.length-1].hi = hi;
+      ST.segments[ST.segments.length-1].end_ms = Math.round(vid.currentTime*1000);
+      pOk(3);
+      document.getElementById('txHiBox').textContent = ST.segments.map(s=>s.hi).join('\n');
+
+      // PIPE 4: TTS
+      pRun(4);
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(hi);
+      u.lang = 'hi-IN';
+      u.rate = 1.0;
+      u.pitch = 1.0;
+      u.volume = 1.0;
+      // pick hindi voice if available
+      const hv = synth.getVoices().find(v=>v.lang.startsWith('hi'));
+      if(hv) u.voice = hv;
+      synth.speak(u);
+      await new Promise(r=>{u.onend=r;u.onerror=r});
+      pOk(4);
+
+      // update progress
+      const pct = duration>0 ? Math.min(90, 15 + (vid.currentTime/duration)*70) : 50;
+      setP(Math.round(pct), `Transcribed ${ST.segments.length} segments…`);
+    }
+  };
+
+  rec.onerror = e=>showErr('Speech error: '+e.error);
+
+  // Start playing video
+  vid.currentTime = 0;
+  vid.muted = false;
+  vid.volume = 1.0;
+
+  // Start recognition
+  rec.start();
+
+  // Let video play to end
+  await new Promise(resolve=>{
+    vid.onended = resolve;
+    vid.onerror = resolve;
+    vid.play().catch(()=>resolve());
+  });
+
+  // Small buffer for last segment
+  await new Promise(r=>setTimeout(r, 1500));
+
+  rec.stop();
+  setP(92,'Finalising audio…');
+  pOk(2);
+
+  // PIPE 5: build output
+  pRun(5);
+  await new Promise(r=>setTimeout(r,600));
+
+  mr.stop();
+  await new Promise(r=>{mr.onstop=r});
+
+  const outMime = ST.chunks[0]?.type || mime || 'audio/webm';
+  const blob = new Blob(ST.chunks, {type:outMime});
+  ST.outputBlob = blob;
+  ST.outputURL = URL.createObjectURL(blob);
+  pOk(5);
+  setP(100,'Done!');
+
+  // Show output
+  const outVid = document.getElementById('outVid');
+  outVid.src = ST.outputURL;
+  document.getElementById('outStats').innerHTML =
+    `<span>📦 <strong>${fmtBytes(blob.size)}</strong></span>` +
+    `<span>🎙 Segments: <strong>${ST.segments.length}</strong></span>` +
+    `<span>⏱ Duration: <strong>${fmt(duration)}</strong></span>`;
+  document.getElementById('btnDl').onclick = ()=>dlBlob(blob,'VoiceDub_Hindi.webm');
+  document.getElementById('cardOut').style.display='block';
+  document.getElementById('cardOut').scrollIntoView({behavior:'smooth'});
+}
+
+// ── EXPORT ──
+function saveSrt(){
+  if(!ST.segments.length){alert('No segments yet.');return;}
+  let s='';
+  ST.segments.forEach((seg,i)=>{
+    s+=`${i+1}\n${toSrt(seg.start_ms||0)} --> ${toSrt(seg.end_ms||seg.start_ms+2000)}\n${seg.hi||seg.src}\n\n`;
+  });
+  dlBlob(new Blob([s],{type:'text/plain'}),'VoiceDub.srt');
+}
+function saveTxt(){
+  if(!ST.segments.length){alert('Nothing to export.');return;}
+  dlBlob(new Blob([ST.segments.map(s=>s.hi).join('\n\n')],{type:'text/plain'}),'VoiceDub_Hindi.txt');
+}
+function toSrt(ms){
+  const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60);
+  return `${p(h)}:${p(m%60)}:${p(s%60)},${String(ms%1000).padStart(3,'0')}`;
+}
+function p(n){return String(n).padStart(2,'0')}
+function fmt(s){s=Math.floor(s||0);return `${Math.floor(s/60)}:${p(s%60)}`}
+function fmtBytes(b){return b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB'}
+function dlBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click()}
+
 function resetAll(){
-  S.recording=false;
-  clearInterval(S.timerInterval);
-  if(S.recognition){try{S.recognition.stop();}catch(e){}}
-  S.synthesis.cancel();
-  if(S.outputURL) URL.revokeObjectURL(S.outputURL);
-  if(S.videoURL) URL.revokeObjectURL(S.videoURL);
-  Object.assign(S,{file:null,videoURL:null,recognition:null,srcTranscript:[],tgtTranscript:[],
-    segments:[],recording:false,mediaRecorder:null,recordedChunks:[],outputURL:null,outputBlob:null,startTime:0});
-  document.getElementById('vidPrev').src='';
-  document.getElementById('vidPrev').style.display='none';
-  document.getElementById('vidMeta').style.display='none';
-  document.getElementById('btnNext1').disabled=true;
-  document.getElementById('vidFile').value='';
-  document.getElementById('cardExport').style.display='none';
-  pipeReset();
-  document.getElementById('progCard').style.display='none';
-  document.getElementById('txArea').style.display='none';
-  document.getElementById('tlArea').style.display='none';
+  ST.file=null;ST.segments=[];ST.chunks=[];
+  if(ST.srcURL) URL.revokeObjectURL(ST.srcURL);
+  if(ST.outputURL) URL.revokeObjectURL(ST.outputURL);
+  document.getElementById('srcVid').src='';document.getElementById('srcVid').style.display='none';
+  document.getElementById('fileIn').value='';
+  document.getElementById('btnStart').disabled=true;
+  document.getElementById('cardProcess').style.display='none';
+  document.getElementById('cardOut').style.display='none';
   document.getElementById('errBox').style.display='none';
-  goStep(1);
+  document.getElementById('txSrcBox').textContent='';
+  document.getElementById('txHiBox').textContent='';
+  for(let i=1;i<=5;i++){document.getElementById('p'+i).className='pipe';document.getElementById('s'+i).textContent='waiting'}
+  setP(0,'');
 }
 </script>
 </body>
-</html>
+  </html>

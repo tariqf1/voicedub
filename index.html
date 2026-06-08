@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceDub Studio</title>
+
+<!-- MUST BE FIRST: injects COOP/COEP headers via service worker for SharedArrayBuffer -->
+<script src="https://cdn.jsdelivr.net/npm/coi-serviceworker@0.1.7/coi-serviceworker.min.js"></script>
+
+<!-- FFmpeg UMD builds — load as plain scripts, no type=module -->
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
+<script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:      #09090f;
+  --surface: #111118;
+  --card:    #16161f;
+  --border:  #2a2a3a;
+  --gold:    #f5c842;
+  --rust:    #e8522a;
+  --teal:    #2dd4bf;
+  --muted:   #6b6b8a;
+  --text:    #f0f0fa;
+  --sub:     #9090b0;
+  --r:       12px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(245,200,66,0.07), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(45,212,191,0.04), transparent);
+}
+
+.page { max-width: 800px; margin: 0 auto; padding: 48px 16px 120px; }
+
+/* ── HEADER ── */
+.header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 48px; flex-wrap: wrap; gap: 16px; }
+.logo { font-size: 38px; font-weight: 800; letter-spacing: -2px; line-height: 1; }
+.logo span { color: var(--rust); }
+.logo-tag { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+.badge {
+  background: linear-gradient(135deg, var(--teal), #0d9488);
+  color: #000; padding: 6px 14px; border-radius: 99px;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  white-space: nowrap; margin-top: 4px;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 24px 22px;
+  margin-bottom: 14px;
+  transition: border-color .3s;
+}
+.card.glow-gold { border-color: rgba(245,200,66,.25); box-shadow: 0 0 40px rgba(245,200,66,.05); }
+.card.glow-teal { border-color: rgba(45,212,191,.25); box-shadow: 0 0 40px rgba(45,212,191,.05); }
+.card-title {
+  font-size: 10px; font-family: 'DM Mono', monospace;
+  letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted);
+  margin-bottom: 18px; display: flex; align-items: center; gap: 10px;
+}
+.card-title::before { content:''; width: 18px; height: 1px; background: var(--border); }
+
+/* ── ENGINE STATUS ── */
+.engines { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.eng-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px;
+  font-family: 'DM Mono', monospace; font-size: 11px; color: var(--sub);
+}
+.eng-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: .4s; }
+.eng-dot.ok      { background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+.eng-dot.loading { background: var(--gold); animation: pulse 1s infinite; }
+.eng-dot.err     { background: var(--rust); }
+
+/* ── NOTICE ── */
+.notice {
+  padding: 11px 14px; border-radius: 8px;
+  font-size: 12px; font-family: 'DM Mono', monospace; line-height: 1.8;
+}
+.notice.info { background: rgba(45,212,191,.06); border-left: 3px solid var(--teal); color: #a0f0e8; }
+.notice.warn { background: rgba(245,200,66,.06); border-left: 3px solid var(--gold); color: #e0d080; }
+.notice.err  { background: rgba(232,82,42,.07);  border-left: 3px solid var(--rust); color: #f09080; }
+
+/* ── DROP ZONE ── */
+.drop {
+  border: 2px dashed var(--border); border-radius: 10px;
+  padding: 56px 20px; text-align: center; cursor: pointer;
+  position: relative; transition: .25s; background: rgba(255,255,255,.01);
+}
+.drop:hover, .drop.over { border-color: var(--rust); background: rgba(232,82,42,.04); }
+.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.drop-ico  { font-size: 44px; display: block; margin-bottom: 14px; }
+.drop-big  { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.drop-sm   { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+video, audio { width: 100%; border-radius: 10px; margin-top: 14px; background: #000; border: 1px solid var(--border); }
+video { display: none; }
+
+/* ── SETTINGS ── */
+.lang-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: end; margin-bottom: 16px; }
+.lang-arrow { text-align: center; color: var(--muted); font-size: 20px; padding-bottom: 8px; }
+.field-lbl { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+select {
+  width: 100%; padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 13px;
+  color: var(--text); cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6b8a'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  transition: border-color .2s;
+}
+select:focus { outline: none; border-color: var(--gold); }
+
+/* ── BUTTONS ── */
+.btn {
+  padding: 12px 24px; border-radius: 8px;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  border: none; cursor: pointer; display: inline-flex; align-items: center;
+  gap: 8px; transition: .18s; letter-spacing: .3px;
+}
+.btn-gold { background: var(--gold); color: #000; box-shadow: 0 4px 24px rgba(245,200,66,.25); }
+.btn-gold:hover:not(:disabled) { background: #f7d060; transform: translateY(-1px); box-shadow: 0 6px 28px rgba(245,200,66,.35); }
+.btn-gold:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.btn-teal  { background: var(--teal); color: #000; box-shadow: 0 4px 20px rgba(45,212,191,.2); }
+.btn-teal:hover { background: #5eead4; transform: translateY(-1px); }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { border-color: var(--sub); background: rgba(255,255,255,.04); }
+.btn-sm { padding: 8px 16px; font-size: 12px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+
+/* ── PIPELINE ── */
+.pipe {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 15px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--surface);
+  transition: .3s; position: relative; overflow: hidden; margin-bottom: 6px;
+}
+.pipe.run  { border-color: rgba(245,200,66,.4); background: rgba(245,200,66,.04); }
+.pipe.ok   { border-color: rgba(45,212,191,.4);  background: rgba(45,212,191,.03); }
+.pipe.fail { border-color: rgba(232,82,42,.4);   background: rgba(232,82,42,.04); }
+.pipe-ico  { font-size: 16px; width: 24px; text-align: center; flex-shrink: 0; }
+.pipe-txt  { flex: 1; }
+.pipe-name { font-size: 13px; font-weight: 600; }
+.pipe-sub  { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+.pipe-st   { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); min-width: 72px; text-align: right; flex-shrink: 0; }
+.pipe.run  .pipe-st { color: var(--gold); }
+.pipe.ok   .pipe-st { color: var(--teal); }
+.pipe.fail .pipe-st { color: var(--rust); }
+.pipe.run::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(245,200,66,.06), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+/* ── PROGRESS ── */
+.prog-wrap { display: none; margin: 18px 0 4px; }
+.prog-top  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.prog-label { font-size: 13px; font-weight: 600; }
+.prog-pct  { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 700; color: var(--gold); }
+.prog-bg   { background: var(--border); border-radius: 99px; height: 4px; overflow: hidden; margin-bottom: 6px; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--rust)); border-radius: 99px; width: 0%; transition: width .5s ease; }
+.prog-msg  { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+/* ── TRANSCRIPTS ── */
+.tx-wrap  { display: none; margin-top: 14px; }
+.tx-head  { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.tx-box   { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-family: 'DM Mono', monospace; font-size: 12px; line-height: 1.9; max-height: 130px; overflow-y: auto; white-space: pre-wrap; color: var(--text); }
+.tx-box.dub { border-left: 3px solid var(--teal); }
+
+/* ── OUTPUT META ── */
+.out-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; padding: 12px 14px; background: var(--surface); border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+.out-meta strong { color: var(--text); }
+
+/* ── ANIMATIONS ── */
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+.spin {
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid rgba(245,200,66,.2); border-top-color: var(--gold);
+  animation: spin .7s linear infinite; vertical-align: middle; margin-right: 4px;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── RESPONSIVE ── */
+@media(max-width:520px){
+  .logo { font-size: 30px; }
+  .lang-grid { grid-template-columns: 1fr; }
+  .lang-arrow { display: none; }
+  .engines { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <div class="logo">Voice<span>Dub</span></div>
+    <div class="logo-tag">AI Video Dubbing Studio</div>
+  </div>
+  <div class="badge">⚡ 100% Offline</div>
+</div>
+
+<!-- ENGINE STATUS -->
+<div class="card glow-gold" id="cardEngines">
+  <div class="card-title">AI Engines</div>
+  <div class="engines">
+    <div class="eng-item"><div class="eng-dot loading" id="dotFFmpeg"></div><span id="lblFFmpeg">FFmpeg.wasm loading...</span></div>
+    <div class="eng-item"><div class="eng-dot loading" id="dotWhisper"></div><span id="lblWhisper">Whisper.js loading...</span></div>
+  </div>
+  <div class="notice warn" id="engNotice">
+    ⏳ Loading AI engines — first run downloads ~60 MB then caches forever.
+  </div>
+</div>
+
+<!-- UPLOAD -->
+<div class="card" id="cardUpload">
+  <div class="card-title">Step 1 — Upload Video</div>
+  <div class="drop" id="drop">
+    <input type="file" id="fileIn" accept="video/*,audio/*">
+    <span class="drop-ico">🎬</span>
+    <div class="drop-big">Drop your video here</div>
+    <div class="drop-sm">MP4 · MOV · WEBM · MKV · AVI</div>
+  </div>
+  <video id="srcVid" controls></video>
+</div>
+
+<!-- SETTINGS -->
+<div class="card" id="cardSettings">
+  <div class="card-title">Step 2 — Languages &amp; Voice</div>
+  <div class="lang-grid">
+    <div>
+      <div class="field-lbl">Video Language (original)</div>
+      <select id="srcLang">
+        <option value="en">English</option>
+        <option value="ur">Urdu</option>
+        <option value="hi">Hindi</option>
+        <option value="ja">Japanese</option>
+        <option value="es">Spanish</option>
+      </select>
+    </div>
+    <div class="lang-arrow">→</div>
+    <div>
+      <div class="field-lbl">Dub Into</div>
+      <select id="tgtLang">
+        <option value="hi">Hindi</option>
+        <option value="ur">Urdu</option>
+        <option value="en">English</option>
+        <option value="ja">Japanese</option>
+        <option value="es">Spanish</option>
+      </select>
+    </div>
+  </div>
+  <div class="field-lbl">Dubbed Voice</div>
+  <select id="voiceSel"><option value="">Loading voices...</option></select>
+  <div class="btn-row">
+    <button class="btn btn-gold" id="btnStart" disabled>⚡ Start Dubbing Video</button>
+  </div>
+</div>
+
+<!-- PIPELINE -->
+<div class="card" id="cardProc" style="display:none">
+  <div class="card-title">Step 3 — Processing Pipeline</div>
+  <div id="errWrap"></div>
+
+  <div class="pipe" id="p1"><span class="pipe-ico">🎬</span><div class="pipe-txt"><div class="pipe-name">Load FFmpeg</div><div class="pipe-sub">WebAssembly video engine</div></div><span class="pipe-st" id="s1">waiting</span></div>
+  <div class="pipe" id="p2"><span class="pipe-ico">🎵</span><div class="pipe-txt"><div class="pipe-name">Extract Audio</div><div class="pipe-sub">Rip audio track from video</div></div><span class="pipe-st" id="s2">waiting</span></div>
+  <div class="pipe" id="p3"><span class="pipe-ico">🧠</span><div class="pipe-txt"><div class="pipe-name">Transcribe</div><div class="pipe-sub">Whisper.js — offline AI</div></div><span class="pipe-st" id="s3">waiting</span></div>
+  <div class="pipe" id="p4"><span class="pipe-ico">🌐</span><div class="pipe-txt"><div class="pipe-name">Translate</div><div class="pipe-sub">MyMemory API</div></div><span class="pipe-st" id="s4">waiting</span></div>
+  <div class="pipe" id="p5"><span class="pipe-ico">🔊</span><div class="pipe-txt"><div class="pipe-name">Synthesise Voice</div><div class="pipe-sub">Browser TTS + Record</div></div><span class="pipe-st" id="s5">waiting</span></div>
+  <div class="pipe" id="p6"><span class="pipe-ico">🎬</span><div class="pipe-txt"><div class="pipe-name">Mute Original Video</div><div class="pipe-sub">Strip original audio track</div></div><span class="pipe-st" id="s6">waiting</span></div>
+  <div class="pipe" id="p7"><span class="pipe-ico">🔀</span><div class="pipe-txt"><div class="pipe-name">Merge Dubbed Audio</div><div class="pipe-sub">Combine video + new voice</div></div><span class="pipe-st" id="s7">waiting</span></div>
+  <div class="pipe" id="p8"><span class="pipe-ico">💾</span><div class="pipe-txt"><div class="pipe-name">Export Video</div><div class="pipe-sub">Final dubbed video file</div></div><span class="pipe-st" id="s8">waiting</span></div>
+
+  <div class="prog-wrap" id="progWrap">
+    <div class="prog-top">
+      <span class="prog-label" id="progLabel">Processing</span>
+      <span class="prog-pct" id="progPct">0%</span>
+    </div>
+    <div class="prog-bg"><div class="prog-fill" id="progFill"></div></div>
+    <div style="margin-top:4px"><span class="prog-msg" id="progMsg">Starting...</span></div>
+  </div>
+
+  <div class="tx-wrap" id="txSrcWrap">
+    <div class="tx-head">Original Transcript</div>
+    <div class="tx-box" id="txSrc"></div>
+  </div>
+  <div class="tx-wrap" id="txDubWrap" style="margin-top:8px">
+    <div class="tx-head">Dubbed Text</div>
+    <div class="tx-box dub" id="txDub"></div>
+  </div>
+</div>
+
+<!-- OUTPUT -->
+<div class="card glow-teal" id="cardOut" style="display:none">
+  <div class="card-title">Step 4 — Your Dubbed Video</div>
+  <div class="notice info">✓ Dubbing complete! Preview below then download.</div>
+  <video id="outVid" controls style="display:block"></video>
+  <div class="out-meta" id="outMeta"></div>
+  <div class="btn-row">
+    <button class="btn btn-teal" id="btnDl">↓ Download Dubbed Video</button>
+    <button class="btn btn-ghost" id="btnReset">↺ New Video</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost btn-sm" id="btnSrt">🎞 Download .SRT Subtitles</button>
+    <button class="btn btn-ghost btn-sm" id="btnTxt">📄 Download Transcript</button>
+  </div>
+</div>
+
+</div><!-- /page -->
+
+<script>
+(function() {
+'use strict';
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+var ST = {
+  file: null, srcURL: null,
+  segments: [], outputBlob: null, outputURL: null,
+  ffmpeg: null, ffmpegReady: false,
+  transcriber: null, whisperReady: false,
+  startTime: 0
+};
+
+function $$(id) { return document.getElementById(id); }
+function ready() { return ST.ffmpegReady && ST.whisperReady; }
+function tryEnableBtn() { $$('btnStart').disabled = !(ST.file && ready()); }
+
+// ── UI HELPERS ───────────────────────────────────────────────────────────────
+function pRun(n) { $$('p'+n).className='pipe run'; $$('s'+n).innerHTML='<span class="spin"></span>running'; }
+function pOk(n,t) { $$('p'+n).className='pipe ok'; $$('s'+n).textContent='✓ '+(t||'done'); }
+function pFail(n,t) { $$('p'+n).className='pipe fail'; $$('s'+n).textContent='✗ '+(t||'error'); }
+function setP(pct, msg) {
+  $$('progPct').textContent = pct + '%';
+  $$('progFill').style.width = pct + '%';
+  if (msg) $$('progMsg').textContent = msg;
+}
+function showErr(msg) {
+  $$('errWrap').innerHTML = '<div class="notice err" style="margin-bottom:10px">' + msg + '</div>';
+}
+function fmtBytes(b) {
+  if (!b) return '0B';
+  if (b < 1048576) return (b/1024).toFixed(1)+'KB';
+  if (b < 1073741824) return (b/1048576).toFixed(1)+'MB';
+  return (b/1073741824).toFixed(2)+'GB';
+}
+function fmtSrt(s) {
+  var ms=Math.round((s%1)*1000), sec=Math.floor(s)%60, min=Math.floor(s/60)%60, hr=Math.floor(s/3600);
+  return String(hr).padStart(2,'0')+':'+String(min).padStart(2,'0')+':'+String(sec).padStart(2,'0')+','+String(ms).padStart(3,'0');
+}
+function dlBlob(blob, name) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+}
+function getExt(name) {
+  var m = name.match(/(\.[^.]+)$/);
+  return m ? m[1] : '.mp4';
+}
+function resetPipeUI() {
+  for (var i=1; i<=8; i++) { $$('p'+i).className='pipe'; $$('s'+i).textContent='waiting'; }
+  $$('errWrap').innerHTML = '';
+  $$('txSrcWrap').style.display = 'none';
+  $$('txDubWrap').style.display = 'none';
+  $$('txSrc').textContent = '';
+  $$('txDub').textContent = '';
+  setP(0,'Ready');
+}
+
+// ── LOAD FFMPEG (UMD — no type=module) ──────────────────────────────────────
+// FFmpegWASM and FFmpegUtil are globals exposed by the UMD <script> tags above
+function loadFFmpeg() {
+  // Wait for UMD scripts to finish loading, then init
+  var attempts = 0;
+  var waitForUMD = setInterval(function() {
+    attempts++;
+    if (typeof FFmpegWASM !== 'undefined' && typeof FFmpegUtil !== 'undefined') {
+      clearInterval(waitForUMD);
+      initFFmpeg();
+    }
+    if (attempts > 60) {
+      clearInterval(waitForUMD);
+      $$('dotFFmpeg').className = 'eng-dot err';
+      $$('lblFFmpeg').textContent = 'FFmpeg UMD failed to load';
+    }
+  }, 300);
+}
+
+function initFFmpeg() {
+  var FFmpeg = FFmpegWASM.FFmpeg;
+  var toBlobURL = FFmpegUtil.toBlobURL;
+  var ff = new FFmpeg();
+  ff.on('log', function() {}); // suppress console noise
+
+  var baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+
+  // Use Promise chain — no async/await at top level
+  toBlobURL(baseURL + '/ffmpeg-core.js', 'text/javascript')
+    .then(function(coreURL) {
+      return toBlobURL(baseURL + '/ffmpeg-core.wasm', 'application/wasm')
+        .then(function(wasmURL) {
+          return ff.load({ coreURL: coreURL, wasmURL: wasmURL });
+        });
+    })
+    .then(function() {
+      ST.ffmpeg = ff;
+      ST.ffmpegReady = true;
+      $$('dotFFmpeg').className = 'eng-dot ok';
+      $$('lblFFmpeg').textContent = 'FFmpeg ready ✓';
+      checkAllReady();
+      tryEnableBtn();
+    })
+    .catch(function(e) {
+      $$('dotFFmpeg').className = 'eng-dot err';
+      $$('lblFFmpeg').textContent = 'FFmpeg failed — reload page';
+      console.error('FFmpeg load error:', e);
+    });
+}
+
+// ── LOAD WHISPER ─────────────────────────────────────────────────────────────
+function loadWhisper() {
+  // Inject transformers.js as a module script (required by the library)
+  var s = document.createElement('script');
+  s.type = 'module';
+  s.textContent = [
+    "(async function(){",
+    "  try {",
+    "    const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');",
+    "    env.allowLocalModels = false;",
+    "    window.__whisperLoad = function(cb) {",
+    "      return pipeline('automatic-speech-recognition','Xenova/whisper-tiny',{progress_callback:cb});",
+    "    };",
+    "    window.__whisperLoadReady = true;",
+    "  } catch(e) {",
+    "    window.__whisperError = e.message;",
+    "  }",
+    "})();"
+  ].join('\n');
+  document.head.appendChild(s);
+
+  var attempts = 0;
+  var poll = setInterval(function() {
+    attempts++;
+    if (window.__whisperLoadReady) {
+      clearInterval(poll);
+      $$('lblWhisper').textContent = 'Downloading Whisper model...';
+      window.__whisperLoad(function(p) {
+        if (p.status === 'downloading') {
+          var pct = p.total ? Math.round((p.loaded/p.total)*100) : '?';
+          $$('lblWhisper').textContent = 'Whisper ' + pct + '% (' + fmtBytes(p.loaded||0) + ')';
+        }
+      }).then(function(pipe) {
+        ST.transcriber = pipe;
+        ST.whisperReady = true;
+        $$('dotWhisper').className = 'eng-dot ok';
+        $$('lblWhisper').textContent = 'Whisper ready ✓';
+        checkAllReady();
+        tryEnableBtn();
+      }).catch(function(e) {
+        $$('dotWhisper').className = 'eng-dot err';
+        $$('lblWhisper').textContent = 'Whisper failed — reload page';
+        console.error('Whisper error:', e);
+      });
+    }
+    if (window.__whisperError) {
+      clearInterval(poll);
+      $$('dotWhisper').className = 'eng-dot err';
+      $$('lblWhisper').textContent = 'Whisper failed — ' + window.__whisperError;
+    }
+    if (attempts > 120) { clearInterval(poll); }
+  }, 300);
+}
+
+function checkAllReady() {
+  if (ST.ffmpegReady && ST.whisperReady) {
+    $$('engNotice').className = 'notice info';
+    $$('engNotice').textContent = '✅ All AI engines ready. Upload a video to begin.';
+  }
+}
+
+loadFFmpeg();
+loadWhisper();
+
+// ── VOICES ───────────────────────────────────────────────────────────────────
+var synth = window.speechSynthesis;
+
+function loadVoices() {
+  var voices = synth.getVoices();
+  if (!voices.length) return;
+  var tgt = $$('tgtLang').value;
+  var sel = $$('voiceSel');
+  sel.innerHTML = '';
+  var match = voices.filter(function(v){ return v.lang.toLowerCase().startsWith(tgt); });
+  var rest  = voices.filter(function(v){ return !v.lang.toLowerCase().startsWith(tgt); });
+  match.concat(rest).forEach(function(v) {
+    var o = document.createElement('option');
+    o.value = v.name;
+    o.textContent = '[' + v.lang + '] ' + v.name;
+    sel.appendChild(o);
+  });
+  if (!sel.options.length) sel.innerHTML = '<option value="">No voices — install language in OS settings</option>';
+}
+if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+loadVoices();
+setTimeout(loadVoices, 500);
+setTimeout(loadVoices, 1500);
+$$('tgtLang').addEventListener('change', loadVoices);
+
+// ── FILE PICK ─────────────────────────────────────────────────────────────────
+var dropEl = $$('drop');
+dropEl.addEventListener('dragover', function(e){ e.preventDefault(); dropEl.classList.add('over'); });
+dropEl.addEventListener('dragleave', function(){ dropEl.classList.remove('over'); });
+dropEl.addEventListener('drop', function(e){ e.preventDefault(); dropEl.classList.remove('over'); pickFile(e.dataTransfer.files[0]); });
+$$('fileIn').addEventListener('change', function(e){ pickFile(e.target.files[0]); });
+
+function pickFile(f) {
+  if (!f) return;
+  ST.file = f;
+  if (ST.srcURL) URL.revokeObjectURL(ST.srcURL);
+  ST.srcURL = URL.createObjectURL(f);
+  var v = $$('srcVid');
+  v.src = ST.srcURL;
+  v.style.display = 'block';
+  tryEnableBtn();
+}
+
+// ── TRANSLATE ─────────────────────────────────────────────────────────────────
+var tlCache = {};
+function translateOne(text, src, tgt) {
+  if (src === tgt) return Promise.resolve(text);
+  var k = src+'|'+tgt+'|'+text;
+  if (tlCache[k]) return Promise.resolve(tlCache[k]);
+  return fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text)+'&langpair='+src+'|'+tgt)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var t = (d.responseData && d.responseData.translatedText) || text;
+      tlCache[k] = t;
+      return t;
+    })
+    .catch(function(){ return text; });
+}
+
+function translateAll(segs, src, tgt) {
+  var out = [];
+  function next(i) {
+    if (i >= segs.length) return Promise.resolve(out);
+    return translateOne(segs[i].text, src, tgt).then(function(tx) {
+      out.push(Object.assign({}, segs[i], { dubbed: tx }));
+      setP(Math.round(40 + (i/segs.length)*20), 'Translating '+(i+1)+'/'+segs.length+'...');
+      return next(i+1);
+    });
+  }
+  return next(0);
+}
+
+// ── TTS + RECORD ──────────────────────────────────────────────────────────────
+function getSupportedMime() {
+  var types = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg'];
+  for (var i=0; i<types.length; i++) {
+    try { if (MediaRecorder.isTypeSupported(types[i])) return types[i]; } catch(e){}
+  }
+  return '';
+}
+
+function speakAndRecord(segments, voiceName, totalDuration) {
+  return new Promise(function(resolve, reject) {
+    var mime = getSupportedMime();
+    if (!mime) { reject(new Error('No supported recording format. Use Chrome or Edge.')); return; }
+
+    var ctx  = new (window.AudioContext || window.webkitAudioContext)();
+    var dest = ctx.createMediaStreamDestination();
+
+    // Silent buffer keeps the stream alive for the full duration
+    var silBuf = ctx.createBuffer(1, ctx.sampleRate * (totalDuration + 15), ctx.sampleRate);
+    var silSrc = ctx.createBufferSource();
+    silSrc.buffer = silBuf;
+    silSrc.connect(dest);
+    silSrc.start();
+
+    var recorder = new MediaRecorder(dest.stream, { mimeType: mime });
+    var chunks = [];
+    recorder.ondataavailable = function(e){ if (e.data && e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = function(){
+      try { silSrc.stop(); } catch(e){}
+      ctx.close();
+      resolve(new Blob(chunks, { type: mime }));
+    };
+    recorder.onerror = function(e){ reject(new Error('Recorder error: ' + (e.error||e).message)); };
+    recorder.start(250);
+
+    synth.cancel();
+    var voices = synth.getVoices();
+    var voice = null;
+    for (var i=0; i<voices.length; i++) {
+      if (voices[i].name === voiceName) { voice = voices[i]; break; }
+    }
+
+    var idx = 0;
+    function speakNext() {
+      if (idx >= segments.length) {
+        setTimeout(function(){ recorder.stop(); }, 2000);
+        return;
+      }
+      var seg = segments[idx]; idx++;
+      var utt = new SpeechSynthesisUtterance(seg.dubbed || seg.text);
+      if (voice) utt.voice = voice;
+      utt.rate = 1.0; utt.pitch = 1.0; utt.volume = 1.0;
+      utt.onend = function() {
+        setP(Math.round(60 + (idx/segments.length)*20), 'Voice '+idx+'/'+segments.length+'...');
+        var delay = 0;
+        if (segments[idx]) delay = Math.max(0, (segments[idx].start - seg.end) * 1000 - 50);
+        setTimeout(speakNext, delay);
+      };
+      utt.onerror = function(){ speakNext(); };
+      synth.speak(utt);
+    }
+    speakNext();
+
+    // Safety cutoff
+    setTimeout(function(){
+      if (recorder.state === 'recording') recorder.stop();
+    }, (totalDuration + 90) * 1000);
+  });
+}
+
+// ── MAIN PIPELINE ─────────────────────────────────────────────────────────────
+$$('btnStart').addEventListener('click', function() {
+  if (!ST.file || !ready()) return;
+
+  ST.segments = [];
+  ST.startTime = Date.now();
+
+  $$('cardProc').style.display = 'block';
+  $$('cardOut').style.display  = 'none';
+  $$('progWrap').style.display = 'block';
+  $$('btnStart').disabled = true;
+  resetPipeUI();
+  $$('progWrap').style.display = 'block';
+
+  var srcLang   = $$('srcLang').value;
+  var tgtLang   = $$('tgtLang').value;
+  var voiceName = $$('voiceSel').value;
+  var ff        = ST.ffmpeg;
+
+  var audioData  = null;
+  var segments   = null;
+  var dubbed     = null;
+  var ttsBlob    = null;
+  var inputName  = 'input' + getExt(ST.file.name);
+
+  var langMap = { hi:'hindi', ur:'urdu', en:'english', ja:'japanese', es:'spanish' };
+
+  // ── Step 1: FFmpeg ready ──────────────────────────────────────────────────
+  pRun(1); setP(2, 'FFmpeg engine ready...');
+  pOk(1, 'ready');
+  setP(5, 'FFmpeg ready');
+
+  // ── Step 2: Extract audio ─────────────────────────────────────────────────
+  pRun(2); setP(8, 'Extracting audio from video...');
+
+  var reader = new FileReader();
+  reader.onerror = function() {
+    showErr('❌ Could not read file.');
+    $$('btnStart').disabled = false;
+  };
+  reader.onload = function(e) {
+    var fileData = new Uint8Array(e.target.result);
+
+    // Write video to FFmpeg virtual FS, then extract audio
+    ff.writeFile(inputName, fileData)
+      .then(function() {
+        return ff.exec(['-i', inputName, '-vn', '-ar', '16000', '-ac', '1', '-f', 'wav', 'extracted.wav']);
+      })
+      .then(function() {
+        return ff.readFile('extracted.wav');
+      })
+      .then(function(wavData) {
+        var audioBlob = new Blob([wavData], { type: 'audio/wav' });
+        pOk(2, fmtBytes(audioBlob.size));
+        setP(15, 'Audio extracted');
+
+        // ── Step 3: Transcribe ───────────────────────────────────────────
+        pRun(3); setP(18, 'Transcribing with Whisper AI...');
+        return audioBlob.arrayBuffer();
+      })
+      .then(function(buf) {
+        var ctx16 = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        return ctx16.decodeAudioData(buf).then(function(decoded) {
+          ctx16.close();
+          var ch = decoded.numberOfChannels, len = decoded.length;
+          var mono = new Float32Array(len);
+          for (var c=0; c<ch; c++) {
+            var d = decoded.getChannelData(c);
+            for (var i=0; i<len; i++) mono[i] += d[i] / ch;
+          }
+          audioData = { audio: mono, duration: decoded.duration };
+          return ST.transcriber(mono, {
+            language: langMap[srcLang] || 'english',
+            task: 'transcribe',
+            return_timestamps: true,
+            chunk_length_s: 30,
+            stride_length_s: 5
+          });
+        });
+      })
+      .then(function(result) {
+        var segs = [];
+        if (result.chunks && result.chunks.length) {
+          result.chunks.forEach(function(c) {
+            var txt = (c.text||'').trim();
+            if (txt) segs.push({
+              start: (c.timestamp && c.timestamp[0]) || 0,
+              end:   (c.timestamp && c.timestamp[1]) || ((c.timestamp && c.timestamp[0])||0) + 3,
+              text:  txt
+            });
+          });
+        } else {
+          var txt = (result.text||'').trim();
+          if (txt) segs.push({ start:0, end: audioData.duration, text: txt });
+        }
+        if (!segs.length) throw new Error('No speech detected. Is the video language correct?');
+        segments = segs;
+        $$('txSrc').textContent = segs.map(function(s){ return s.text; }).join(' ');
+        $$('txSrcWrap').style.display = 'block';
+        pOk(3, segs.length+' segs');
+        setP(40, 'Transcribed '+segs.length+' segments');
+
+        // ── Step 4: Translate ────────────────────────────────────────────
+        pRun(4); setP(40, 'Translating...');
+        return translateAll(segs, srcLang, tgtLang);
+      })
+      .then(function(dub) {
+        dubbed = dub;
+        ST.segments = dub;
+        $$('txDub').textContent = dub.map(function(s){ return s.dubbed||s.text; }).join(' ');
+        $$('txDubWrap').style.display = 'block';
+        pOk(4, 'done');
+        setP(60, 'Translation complete');
+
+        // ── Step 5: Synthesise TTS ───────────────────────────────────────
+        pRun(5); setP(60, 'Synthesising dubbed voice...');
+        return speakAndRecord(dubbed, voiceName, audioData.duration);
+      })
+      .then(function(blob) {
+        ttsBlob = blob;
+        pOk(5, fmtBytes(blob.size));
+        setP(80, 'Voice synthesised');
+
+        // ── Step 6: Mute original video ──────────────────────────────────
+        pRun(6); setP(82, 'Removing original audio...');
+        return blob.arrayBuffer().then(function(abuf) {
+          var ttsData = new Uint8Array(abuf);
+          var ttsExt  = blob.type.includes('ogg') ? '.ogg' : '.webm';
+          return ff.writeFile('tts'+ttsExt, ttsData).then(function() {
+            return ff.exec(['-i', inputName, '-an', '-c:v', 'copy', 'muted.webm']);
+          }).then(function() {
+            return ttsExt;
+          });
+        });
+      })
+      .then(function(ttsExt) {
+        pOk(6, 'done');
+        setP(88, 'Original audio removed');
+
+        // ── Step 7: Merge dubbed audio into video ─────────────────────────
+        pRun(7); setP(90, 'Merging dubbed voice into video...');
+        return ff.exec([
+          '-i', 'muted.webm',
+          '-i', 'tts'+ttsExt,
+          '-c:v', 'copy',
+          '-c:a', 'libopus',
+          '-shortest',
+          'output.webm'
+        ]);
+      })
+      .then(function() {
+        pOk(7, 'done');
+        setP(95, 'Audio merged into video');
+
+        // ── Step 8: Export ────────────────────────────────────────────────
+        pRun(8); setP(97, 'Building output file...');
+        return ff.readFile('output.webm');
+      })
+      .then(function(outData) {
+        ST.outputBlob = new Blob([outData], { type: 'video/webm' });
+        if (ST.outputURL) URL.revokeObjectURL(ST.outputURL);
+        ST.outputURL = URL.createObjectURL(ST.outputBlob);
+        $$('outVid').src = ST.outputURL;
+
+        pOk(8, fmtBytes(ST.outputBlob.size));
+        setP(100, 'Done!');
+
+        var elapsed = ((Date.now() - ST.startTime)/1000).toFixed(1);
+        $$('outMeta').innerHTML =
+          '<span>⏱ <strong>'+elapsed+'s</strong></span>'+
+          '<span>📄 <strong>'+segments.length+' segs</strong></span>'+
+          '<span>💾 <strong>'+fmtBytes(ST.outputBlob.size)+'</strong></span>'+
+          '<span>🎙 <strong>'+tgtLang.toUpperCase()+' dubbed</strong></span>';
+
+        $$('cardOut').style.display = 'block';
+        $$('cardOut').scrollIntoView({ behavior: 'smooth' });
+
+        // Cleanup FFmpeg virtual FS
+        Promise.all([
+          ff.deleteFile(inputName).catch(function(){}),
+          ff.deleteFile('extracted.wav').catch(function(){}),
+          ff.deleteFile('muted.webm').catch(function(){}),
+          ff.deleteFile('output.webm').catch(function(){})
+        ]);
+
+        $$('btnStart').disabled = false;
+      })
+      .catch(function(e) {
+        showErr('❌ ' + e.message);
+        console.error(e);
+        $$('btnStart').disabled = false;
+        // Mark any still-running step as failed
+        for (var i=1; i<=8; i++) {
+          if ($$('p'+i).className.indexOf('run') > -1) pFail(i, 'error');
+        }
+      });
+  };
+  reader.readAsArrayBuffer(ST.file);
+});
+
+// ── DOWNLOADS ─────────────────────────────────────────────────────────────────
+$$('btnDl').addEventListener('click', function() {
+  if (!ST.outputBlob) return;
+  dlBlob(ST.outputBlob, 'VoiceDub_'+Date.now()+'.webm');
+});
+
+$$('btnSrt').addEventListener('click', function() {
+  if (!ST.segments.length) return;
+  var srt = '';
+  ST.segments.forEach(function(s, i) {
+    srt += (i+1)+'\n'+fmtSrt(s.start)+' --> '+fmtSrt(s.end)+'\n'+(s.dubbed||s.text)+'\n\n';
+  });
+  dlBlob(new Blob([srt], { type: 'text/plain' }), 'VoiceDub_subtitles.srt');
+});
+
+$$('btnTxt').addEventListener('click', function() {
+  if (!ST.segments.length) return;
+  var orig = ST.segments.map(function(s){ return s.text; }).join('\n');
+  var dub  = ST.segments.map(function(s){ return s.dubbed||s.text; }).join('\n');
+  dlBlob(new Blob(['=== ORIGINAL ===\n'+orig+'\n\n=== DUBBED ===\n'+dub], { type: 'text/plain' }), 'VoiceDub_transcript.txt');
+});
+
+$$('btnReset').addEventListener('click', function() {
+  synth.cancel();
+  ST.file = null;
+  if (ST.srcURL)    { URL.revokeObjectURL(ST.srcURL);    ST.srcURL    = null; }
+  if (ST.outputURL) { URL.revokeObjectURL(ST.outputURL); ST.outputURL = null; }
+  ST.segments = []; ST.outputBlob = null;
+  $$('srcVid').src = ''; $$('srcVid').style.display = 'none';
+  $$('outVid').src = '';
+  $$('fileIn').value = '';
+  $$('cardProc').style.display = 'none';
+  $$('cardOut').style.display  = 'none';
+  $$('progWrap').style.display = 'none';
+  resetPipeUI();
+  tryEnableBtn();
+  window.scrollTo({ top:0, behavior:'smooth' });
+});
+
+})();
+</script>
+</body>
+</html>

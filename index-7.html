@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceDub Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a12;--card:#13131e;--border:#252535;--gold:#f5c518;--rust:#e84545;--teal:#00d4aa;--muted:#555570;--text:#eeeef8;--sub:#8888aa}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;padding:32px 16px 80px}
+.wrap{max-width:720px;margin:0 auto}
+/* HEADER */
+h1{font-size:32px;font-weight:800;letter-spacing:-1.5px;margin-bottom:4px}
+h1 span{color:var(--rust)}
+.sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:32px}
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:12px}
+.card-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+/* STATUS ROW */
+.status-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.st{display:flex;align-items:center;gap:7px;padding:8px 12px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--sub);flex:1;min-width:140px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:.3s}
+.dot.ok{background:var(--teal);box-shadow:0 0 6px var(--teal)}
+.dot.loading{background:var(--gold);animation:blink 1s infinite}
+.dot.err{background:var(--rust)}
+/* NOTICE */
+.note{padding:10px 14px;border-radius:8px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.7;margin-bottom:0}
+.note.warn{background:rgba(245,197,24,.06);border-left:3px solid var(--gold);color:#d4b840}
+.note.ok{background:rgba(0,212,170,.06);border-left:3px solid var(--teal);color:#60c8a8}
+.note.err{background:rgba(232,69,69,.07);border-left:3px solid var(--rust);color:#e08080}
+/* DROP */
+.drop{border:2px dashed var(--border);border-radius:10px;padding:44px 20px;text-align:center;cursor:pointer;position:relative;transition:.2s}
+.drop:hover,.drop.over{border-color:var(--teal);background:rgba(0,212,170,.03)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-ico{font-size:36px;margin-bottom:10px;display:block}
+.drop-big{font-size:15px;font-weight:700;margin-bottom:4px}
+.drop-sm{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+video{width:100%;border-radius:8px;margin-top:12px;background:#000;border:1px solid var(--border);display:none}
+/* FIELDS */
+.grid2{display:grid;grid-template-columns:1fr 28px 1fr;gap:8px;align-items:end;margin-bottom:12px}
+.arrow{text-align:center;color:var(--muted);padding-bottom:9px;font-size:18px}
+.lbl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+select{width:100%;padding:9px 12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;color:var(--text);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555570'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;outline:none;transition:border-color .2s}
+select:focus{border-color:var(--teal)}
+/* BIG BUTTON */
+#btnStart{
+  width:100%;padding:16px;margin-top:14px;
+  background:var(--gold);color:#000;
+  border:none;border-radius:10px;
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:800;
+  cursor:pointer;letter-spacing:.3px;
+  transition:background .15s,transform .1s;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+#btnStart:hover{background:#ffd630}
+#btnStart:active{transform:scale(.98)}
+#btnMsg{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:center;margin-top:8px;min-height:16px}
+/* PIPELINE */
+.pipe{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.02);margin-bottom:5px;transition:.25s;position:relative;overflow:hidden}
+.pipe.run{border-color:rgba(245,197,24,.35);background:rgba(245,197,24,.03)}
+.pipe.ok{border-color:rgba(0,212,170,.35);background:rgba(0,212,170,.03)}
+.pipe.fail{border-color:rgba(232,69,69,.35);background:rgba(232,69,69,.03)}
+.pipe.run::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(245,197,24,.05),transparent);animation:sweep 1.4s infinite}
+.pipe-ico{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.pipe-txt{flex:1}
+.pipe-name{font-size:12px;font-weight:700}
+.pipe-hint{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+.pipe-st{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:right;flex-shrink:0;min-width:64px}
+.pipe.run .pipe-st{color:var(--gold)}
+.pipe.ok .pipe-st{color:var(--teal)}
+.pipe.fail .pipe-st{color:var(--rust)}
+/* PROGRESS */
+.prog{display:none;margin:14px 0 6px}
+.prog-row{display:flex;justify-content:space-between;margin-bottom:6px}
+.prog-label{font-size:13px;font-weight:700}
+.prog-pct{font-family:'DM Mono',monospace;font-size:20px;font-weight:700;color:var(--gold)}
+.prog-bar{background:var(--border);border-radius:99px;height:3px;overflow:hidden;margin-bottom:5px}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--rust));width:0%;transition:width .4s}
+.prog-msg{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+/* TRANSCRIPT */
+.tx{display:none;margin-top:10px}
+.tx-lbl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.tx-box{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.8;max-height:100px;overflow-y:auto;color:var(--text);white-space:pre-wrap}
+.tx-box.dub{border-left:3px solid var(--teal)}
+/* OUTPUT */
+.meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;background:rgba(255,255,255,.02);border-radius:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.meta strong{color:var(--text)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn{padding:10px 18px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;border:none;cursor:pointer;transition:.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.btn-teal{background:var(--teal);color:#000}
+.btn-teal:hover{background:#20e8bf}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{border-color:var(--sub);background:rgba(255,255,255,.04)}
+.btn-sm{padding:8px 14px;font-size:12px}
+/* SPINNER */
+.sp{display:inline-block;width:9px;height:9px;border-radius:50%;border:2px solid rgba(245,197,24,.2);border-top-color:var(--gold);animation:spin .65s linear infinite;vertical-align:middle;margin-right:3px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes sweep{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+@media(max-width:480px){.grid2{grid-template-columns:1fr}.arrow{display:none}h1{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Voice<span>Dub</span></h1>
+<div class="sub">AI Video Dubbing — 100% In Browser</div>
+
+<!-- ENGINES -->
+<div class="card" id="cardEng">
+  <div class="card-title">Engines</div>
+  <div class="status-row">
+    <div class="st"><div class="dot loading" id="dotWH"></div><span id="lblWH">Whisper loading...</span></div>
+    <div class="st"><div class="dot ok" id="dotTL"></div><span id="lblTL">Translator ready ✓</span></div>
+    <div class="st"><div class="dot ok" id="dotTTS"></div><span id="lblTTS">TTS ready ✓</span></div>
+    <div class="st"><div class="dot ok" id="dotMR"></div><span id="lblMR">MediaRecorder ready ✓</span></div>
+  </div>
+  <div class="note warn" id="engNote">⏳ Downloading Whisper model (~40MB) — only once, then cached.</div>
+</div>
+
+<!-- STEP 1 -->
+<div class="card">
+  <div class="card-title">1 — Video</div>
+  <div class="drop" id="drop">
+    <input type="file" id="fileIn" accept="video/*,audio/*">
+    <span class="drop-ico">🎬</span>
+    <div class="drop-big">Tap to pick your video</div>
+    <div class="drop-sm">MP4 · MOV · WEBM · AVI · MKV</div>
+  </div>
+  <video id="srcVid" controls></video>
+</div>
+
+<!-- STEP 2 -->
+<div class="card">
+  <div class="card-title">2 — Language &amp; Voice</div>
+  <div class="grid2">
+    <div>
+      <div class="lbl">Original</div>
+      <select id="srcLang">
+        <option value="en">English</option>
+        <option value="ur">Urdu</option>
+        <option value="hi">Hindi</option>
+        <option value="ja">Japanese</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="de">German</option>
+        <option value="ar">Arabic</option>
+        <option value="zh">Chinese</option>
+        <option value="ru">Russian</option>
+        <option value="tr">Turkish</option>
+        <option value="ko">Korean</option>
+      </select>
+    </div>
+    <div class="arrow">→</div>
+    <div>
+      <div class="lbl">Dub Into</div>
+      <select id="tgtLang">
+        <option value="hi">Hindi</option>
+        <option value="ur">Urdu</option>
+        <option value="en">English</option>
+        <option value="ja">Japanese</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="de">German</option>
+        <option value="ar">Arabic</option>
+        <option value="zh">Chinese</option>
+        <option value="ru">Russian</option>
+        <option value="tr">Turkish</option>
+        <option value="ko">Korean</option>
+      </select>
+    </div>
+  </div>
+  <div class="lbl">Voice</div>
+  <select id="voiceSel" style="margin-bottom:0"><option>Loading...</option></select>
+  <button id="btnStart">⚡ Start Dubbing</button>
+  <div id="btnMsg"></div>
+</div>
+
+<!-- PIPELINE -->
+<div class="card" id="cardProc" style="display:none">
+  <div class="card-title">3 — Processing</div>
+  <div id="errBox"></div>
+  <div class="pipe" id="p1"><span class="pipe-ico">🧠</span><div class="pipe-txt"><div class="pipe-name">Transcribe</div><div class="pipe-hint">Whisper AI</div></div><span class="pipe-st" id="s1">waiting</span></div>
+  <div class="pipe" id="p2"><span class="pipe-ico">🌐</span><div class="pipe-txt"><div class="pipe-name">Translate</div><div class="pipe-hint">MyMemory API</div></div><span class="pipe-st" id="s2">waiting</span></div>
+  <div class="pipe" id="p3"><span class="pipe-ico">🔊</span><div class="pipe-txt"><div class="pipe-name">Dub Voice</div><div class="pipe-hint">Browser TTS</div></div><span class="pipe-st" id="s3">waiting</span></div>
+  <div class="pipe" id="p4"><span class="pipe-ico">🎬</span><div class="pipe-txt"><div class="pipe-name">Build Video</div><div class="pipe-hint">Merge video + dubbed audio</div></div><span class="pipe-st" id="s4">waiting</span></div>
+  <div class="prog" id="progWrap">
+    <div class="prog-row"><span class="prog-label">Processing</span><span class="prog-pct" id="progPct">0%</span></div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    <div class="prog-msg" id="progMsg">Starting...</div>
+  </div>
+  <div class="tx" id="txSW"><div class="tx-lbl">Original</div><div class="tx-box" id="txS"></div></div>
+  <div class="tx" id="txDW" style="margin-top:8px"><div class="tx-lbl">Dubbed</div><div class="tx-box dub" id="txD"></div></div>
+</div>
+
+<!-- OUTPUT -->
+<div class="card" id="cardOut" style="display:none">
+  <div class="card-title">4 — Result</div>
+  <div class="note ok">✅ Done! Preview and download your dubbed video.</div>
+  <video id="outVid" controls style="display:block"></video>
+  <div class="meta" id="outMeta"></div>
+  <div class="btn-row">
+    <button class="btn btn-teal" id="btnDl">↓ Download Video</button>
+    <button class="btn btn-ghost" id="btnReset">↺ New Video</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost btn-sm" id="btnSrt">📄 SRT Subtitles</button>
+    <button class="btn btn-ghost btn-sm" id="btnTxt">📝 Transcript</button>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+<script>
+(function(){
+'use strict';
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+var ST={
+  file:null,srcURL:null,
+  outBlob:null,outURL:null,
+  segs:[],busy:false,t0:0,
+  transcriber:null,whReady:false,
+  _dur:0
+};
+
+function $(id){return document.getElementById(id);}
+function fmtB(b){if(!b)return'0B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+function fmtSrt(s){var ms=Math.round((s%1)*1000),sec=Math.floor(s)%60,min=Math.floor(s/60)%60,hr=Math.floor(s/3600);return String(hr).padStart(2,'0')+':'+String(min).padStart(2,'0')+':'+String(sec).padStart(2,'0')+','+String(ms).padStart(3,'0');}
+function dl(blob,name){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(a.href);},2000);}
+function fileExt(n){var m=n.match(/(\.[^.]+)$/);return m?m[1]:'.mp4';}
+
+function setP(pct,msg){$('progPct').textContent=pct+'%';$('progFill').style.width=pct+'%';if(msg)$('progMsg').textContent=msg;}
+function pRun(n){$('p'+n).className='pipe run';$('s'+n).innerHTML='<span class="sp"></span>running';}
+function pOk(n,t){$('p'+n).className='pipe ok';$('s'+n).textContent='✓ '+(t||'done');}
+function pFail(n){$('p'+n).className='pipe fail';$('s'+n).textContent='✗ failed';}
+function showErr(msg){$('errBox').innerHTML='<div class="note err" style="margin-bottom:10px">❌ '+msg+'</div>';}
+function clearErr(){$('errBox').innerHTML='';}
+function bMsg(m,c){$('btnMsg').textContent=m;$('btnMsg').style.color=c||'var(--muted)';}
+function resetPipes(){for(var i=1;i<=4;i++){$('p'+i).className='pipe';$('s'+i).textContent='waiting';}clearErr();$('txSW').style.display='none';$('txDW').style.display='none';$('txS').textContent='';$('txD').textContent='';setP(0,'Ready');}
+
+// ── CHECK MEDIARECORDER ────────────────────────────────────────────────────
+function getMime(){
+  var t=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg'];
+  for(var i=0;i<t.length;i++){try{if(MediaRecorder.isTypeSupported(t[i]))return t[i];}catch(e){}}
+  return '';
+}
+if(!getMime()){
+  $('dotMR').className='dot err';
+  $('lblMR').textContent='MediaRecorder unsupported';
+}
+
+// ── LOAD WHISPER ───────────────────────────────────────────────────────────
+(function(){
+  var s=document.createElement('script');
+  s.type='module';
+  s.textContent='(async()=>{try{const{pipeline,env}=await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js");env.allowLocalModels=false;window.__wLoad=cb=>pipeline("automatic-speech-recognition","Xenova/whisper-tiny",{progress_callback:cb});window.__wOK=true;}catch(e){window.__wErr=e.message;}})();';
+  document.head.appendChild(s);
+  var tries=0;
+  var t=setInterval(function(){
+    tries++;
+    if(window.__wOK){
+      clearInterval(t);
+      $('lblWH').textContent='Loading Whisper model...';
+      window.__wLoad(function(p){
+        if(p.status==='downloading'){
+          var pct=p.total?Math.round(p.loaded/p.total*100):'?';
+          $('lblWH').textContent='Whisper '+pct+'% ('+fmtB(p.loaded||0)+')';
+        }
+      }).then(function(pipe){
+        ST.transcriber=pipe; ST.whReady=true;
+        $('dotWH').className='dot ok';
+        $('lblWH').textContent='Whisper ready ✓';
+        $('engNote').className='note ok';
+        $('engNote').textContent='✅ All engines ready — pick a video and tap Start!';
+      }).catch(function(e){
+        $('dotWH').className='dot err';
+        $('lblWH').textContent='Whisper failed';
+        $('engNote').className='note err';
+        $('engNote').textContent='Whisper failed to load: '+e.message+'. Try reloading.';
+      });
+    }
+    if(window.__wErr){
+      clearInterval(t);
+      $('dotWH').className='dot err';
+      $('lblWH').textContent='Whisper error';
+      $('engNote').className='note err';
+      $('engNote').textContent='Whisper error: '+window.__wErr;
+    }
+    if(tries>200)clearInterval(t);
+  },200);
+})();
+
+// ── VOICES ─────────────────────────────────────────────────────────────────
+var SYN=window.speechSynthesis;
+function loadVoices(){
+  var vv=SYN.getVoices();if(!vv.length)return;
+  var tgt=$('tgtLang').value;
+  var sel=$('voiceSel');sel.innerHTML='';
+  var match=vv.filter(function(v){return v.lang.toLowerCase().startsWith(tgt);});
+  var rest=vv.filter(function(v){return!v.lang.toLowerCase().startsWith(tgt);});
+  match.concat(rest).forEach(function(v){
+    var o=document.createElement('option');
+    o.value=v.name;o.textContent='['+v.lang+'] '+v.name;
+    sel.appendChild(o);
+  });
+  if(!sel.options.length)sel.innerHTML='<option value="">No voices — install language pack</option>';
+}
+if(SYN.onvoiceschanged!==undefined)SYN.onvoiceschanged=loadVoices;
+loadVoices();setTimeout(loadVoices,500);setTimeout(loadVoices,2000);
+$('tgtLang').addEventListener('change',loadVoices);
+
+// ── FILE PICK ──────────────────────────────────────────────────────────────
+var drop=$('drop');
+drop.addEventListener('dragover',function(e){e.preventDefault();drop.classList.add('over');});
+drop.addEventListener('dragleave',function(){drop.classList.remove('over');});
+drop.addEventListener('drop',function(e){e.preventDefault();drop.classList.remove('over');pick(e.dataTransfer.files[0]);});
+$('fileIn').addEventListener('change',function(e){pick(e.target.files[0]);});
+function pick(f){
+  if(!f)return;
+  ST.file=f;
+  if(ST.srcURL)URL.revokeObjectURL(ST.srcURL);
+  ST.srcURL=URL.createObjectURL(f);
+  $('srcVid').src=ST.srcURL;
+  $('srcVid').style.display='block';
+  bMsg('✓ '+f.name+' ('+fmtB(f.size)+')','var(--teal)');
+}
+
+// ── TRANSLATE ──────────────────────────────────────────────────────────────
+var cache={};
+function tlOne(text,src,tgt){
+  if(src===tgt)return Promise.resolve(text);
+  var k=src+'|'+tgt+'|'+text;
+  if(cache[k])return Promise.resolve(cache[k]);
+  return fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(text)+'&langpair='+src+'|'+tgt)
+    .then(function(r){return r.json();})
+    .then(function(d){var t=(d.responseData&&d.responseData.translatedText)||text;cache[k]=t;return t;})
+    .catch(function(){return text;});
+}
+function tlAll(segs,src,tgt){
+  var out=[];
+  function next(i){
+    if(i>=segs.length)return Promise.resolve(out);
+    return tlOne(segs[i].text,src,tgt).then(function(tx){
+      out.push(Object.assign({},segs[i],{dubbed:tx}));
+      setP(Math.round(30+(i/segs.length)*20),'Translating '+(i+1)+'/'+segs.length+'...');
+      return next(i+1);
+    });
+  }
+  return next(0);
+}
+
+// ── TTS → AUDIO BLOB (no FFmpeg, pure browser) ────────────────────────────
+function ttsToBlob(segs,vname){
+  return new Promise(function(resolve,reject){
+    var mime=getMime();
+    if(!mime){reject(new Error('MediaRecorder not supported. Use Chrome or Edge.'));return;}
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    var dest=ctx.createMediaStreamDestination();
+    // Keep stream alive with silence
+    var silLen=ctx.sampleRate*300; // 5 min max
+    var sil=ctx.createBuffer(1,silLen,ctx.sampleRate);
+    var silSrc=ctx.createBufferSource();silSrc.buffer=sil;silSrc.connect(dest);silSrc.start();
+    var rec=new MediaRecorder(dest.stream,{mimeType:mime});
+    var chunks=[];
+    rec.ondataavailable=function(e){if(e.data&&e.data.size>0)chunks.push(e.data);};
+    rec.onstop=function(){try{silSrc.stop();}catch(e){}ctx.close();resolve(new Blob(chunks,{type:mime}));};
+    rec.onerror=function(e){reject(new Error('Recorder error'));};
+    rec.start(100);
+    SYN.cancel();
+    var voices=SYN.getVoices();
+    var voice=null;
+    for(var i=0;i<voices.length;i++){if(voices[i].name===vname){voice=voices[i];break;}}
+    var idx=0;
+    function speak(){
+      if(idx>=segs.length){setTimeout(function(){rec.stop();},1500);return;}
+      var seg=segs[idx];idx++;
+      var u=new SpeechSynthesisUtterance(seg.dubbed||seg.text);
+      if(voice)u.voice=voice;
+      u.rate=1.0;u.pitch=1.0;u.volume=1.0;
+      u.onend=function(){
+        setP(Math.round(52+(idx/segs.length)*18),'Voice '+idx+'/'+segs.length);
+        var gap=segs[idx]?Math.max(0,(segs[idx].start-seg.end)*1000-40):0;
+        setTimeout(speak,gap);
+      };
+      u.onerror=function(){speak();};
+      SYN.speak(u);
+    }
+    speak();
+    // Hard cutoff
+    setTimeout(function(){if(rec.state==='recording')rec.stop();},(ST._dur+120)*1000);
+  });
+}
+
+// ── MERGE VIDEO + AUDIO (no FFmpeg!) ──────────────────────────────────────
+// Strategy: mute original video track using HTMLVideoElement + AudioContext,
+// mix in TTS audio, capture both with MediaRecorder via canvas + AudioContext
+function mergeVideoAudio(videoFile, audioBlob){
+  return new Promise(function(resolve, reject){
+    var outMime = getMime().replace('audio','video');
+    // fallback: if video/webm not supported, use audio/webm and just do audio
+    var supportsVideo = false;
+    try{ supportsVideo = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus') || MediaRecorder.isTypeSupported('video/webm'); }catch(e){}
+
+    if(!supportsVideo){
+      // Just return the audio blob — limited but works everywhere
+      resolve({blob: audioBlob, audioOnly: true});
+      return;
+    }
+
+    var videoURL = URL.createObjectURL(videoFile);
+    var audioURL = URL.createObjectURL(audioBlob);
+
+    var vid = document.createElement('video');
+    vid.src = videoURL;
+    vid.muted = true; // mute original audio
+    vid.playsInline = true;
+    vid.preload = 'auto';
+
+    vid.onloadedmetadata = function(){
+      var W = vid.videoWidth || 640;
+    var H = vid.videoHeight || 360;
+
+      var canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      var ctx2d = canvas.getContext('2d');
+
+      // Audio: TTS audio source
+      var actx = new(window.AudioContext||window.webkitAudioContext)();
+      var dest = actx.createMediaStreamDestination();
+
+      // Load TTS audio
+      var ttsAud = new Audio(audioURL);
+      var ttsNode = actx.createMediaElementSource(ttsAud);
+      ttsNode.connect(dest);
+      ttsNode.connect(actx.destination);
+
+      // Canvas stream + audio stream → combine
+      var canvasStream = canvas.captureStream(25);
+      var combined = new MediaStream();
+      canvasStream.getVideoTracks().forEach(function(t){combined.addTrack(t);});
+      dest.stream.getAudioTracks().forEach(function(t){combined.addTrack(t);});
+
+      var recMime = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
+        ? 'video/webm;codecs=vp8,opus'
+        : 'video/webm';
+
+      var rec = new MediaRecorder(combined, {mimeType: recMime});
+      var chunks = [];
+      rec.ondataavailable = function(e){if(e.data&&e.data.size>0)chunks.push(e.data);};
+      rec.onstop = function(){
+        URL.revokeObjectURL(videoURL);
+        URL.revokeObjectURL(audioURL);
+        actx.close();
+        resolve({blob: new Blob(chunks,{type:'video/webm'}), audioOnly: false});
+      };
+
+      // Draw video frames to canvas
+      var drawing = true;
+      function drawFrame(){
+        if(!drawing)return;
+        ctx2d.drawImage(vid,0,0,W,H);
+        requestAnimationFrame(drawFrame);
+      }
+
+      rec.start(200);
+      vid.play();
+      ttsAud.play();
+      drawFrame();
+
+      vid.onended = function(){
+        drawing = false;
+        setTimeout(function(){ rec.stop(); }, 1000);
+      };
+      // safety stop
+      setTimeout(function(){if(rec.state==='recording'){drawing=false;rec.stop();}}, (ST._dur+30)*1000);
+    };
+    vid.onerror = function(){ reject(new Error('Cannot load video for merging.')); };
+  });
+}
+
+// ── MAIN PIPELINE ──────────────────────────────────────────────────────────
+$('btnStart').addEventListener('click',function(){
+  if(!ST.file){bMsg('⚠️ Pick a video first!','var(--rust)');$('srcVid').scrollIntoView({behavior:'smooth'});return;}
+  if(!ST.whReady){
+    bMsg('⏳ Whisper still loading — please wait...','var(--gold)');
+    // auto retry when ready
+    var wt=setInterval(function(){
+      if(ST.whReady){clearInterval(wt);$('btnStart').click();}
+    },500);
+    return;
+  }
+  if(ST.busy){bMsg('⏳ Already running...','var(--gold)');return;}
+
+  ST.busy=true;ST.t0=Date.now();ST.segs=[];
+  bMsg('','');clearErr();
+  $('cardProc').style.display='block';
+  $('cardOut').style.display='none';
+  $('progWrap').style.display='block';
+  resetPipes();
+
+  var src=$('srcLang').value;
+  var tgt=$('tgtLang').value;
+  var vname=$('voiceSel').value;
+  var langMap={hi:'hindi',ur:'urdu',en:'english',ja:'japanese',es:'spanish',fr:'french',de:'german',ar:'arabic',zh:'chinese',ru:'russian',tr:'turkish',ko:'korean'};
+
+  function fail(msg,step){
+    showErr(msg);
+    if(step)pFail(step);
+    for(var i=1;i<=4;i++){if($('p'+i).className.indexOf('run')>-1)pFail(i);}
+    ST.busy=false;
+    bMsg('Failed — see error above','var(--rust)');
+  }
+
+  // Step 1: Transcribe
+  pRun(1);setP(5,'Reading audio from video...');
+
+  // Read file
+  var rdr=new FileReader();
+  rdr.onerror=function(){fail('Cannot read file.',1);};
+  rdr.onload=function(e){
+    var buf=e.target.result;
+    // Decode audio using Web Audio API (no FFmpeg needed!)
+    var actx=new(window.AudioContext||window.webkitAudioContext)();
+    actx.decodeAudioData(buf.slice(0)).then(function(decoded){
+      actx.close();
+      ST._dur=decoded.duration;
+      // Mix to mono float32 at 16kHz for Whisper
+      var targetSR=16000;
+      var ratio=decoded.sampleRate/targetSR;
+      var monoLen=Math.round(decoded.length/ratio);
+      var mono=new Float32Array(monoLen);
+      var nCh=decoded.numberOfChannels;
+      for(var c=0;c<nCh;c++){
+        var ch=decoded.getChannelData(c);
+        for(var i=0;i<monoLen;i++){
+          var src2=Math.min(Math.round(i*ratio),ch.length-1);
+          mono[i]+=ch[src2]/nCh;
+        }
+      }
+      setP(10,'Transcribing with Whisper AI...');
+      return ST.transcriber(mono,{language:langMap[src]||'english',task:'transcribe',return_timestamps:true,chunk_length_s:30,stride_length_s:5});
+    })
+    .then(function(res){
+      var segs=[];
+      if(res.chunks&&res.chunks.length){
+        res.chunks.forEach(function(c){
+          var t=(c.text||'').trim();
+          if(t)segs.push({start:(c.timestamp&&c.timestamp[0])||0,end:(c.timestamp&&c.timestamp[1])||((c.timestamp&&c.timestamp[0])||0)+3,text:t});
+        });
+      }else{
+        var t=(res.text||'').trim();
+        if(t)segs.push({start:0,end:ST._dur,text:t});
+      }
+      if(!segs.length)throw new Error('No speech detected. Is the language setting correct?');
+      $('txS').textContent=segs.map(function(s){return s.text;}).join(' ');
+      $('txSW').style.display='block';
+      pOk(1,segs.length+' segs');setP(30,'Transcribed!');
+
+      // Step 2: Translate
+      pRun(2);setP(30,'Translating...');
+      return tlAll(segs,src,tgt).then(function(dubbed){return {segs:segs,dubbed:dubbed};});
+    })
+    .then(function(r){
+      ST.segs=r.dubbed;
+      $('txD').textContent=r.dubbed.map(function(s){return s.dubbed||s.text;}).join(' ');
+      $('txDW').style.display='block';
+      pOk(2,'done');setP(50,'Translated!');
+
+      // Step 3: TTS
+      pRun(3);setP(52,'Recording dubbed voice...');
+      return ttsToBlob(r.dubbed,vname);
+    })
+    .then(function(ttsBlob){
+      pOk(3,fmtB(ttsBlob.size));setP(72,'Voice recorded!');
+
+      // Step 4: Merge
+      pRun(4);setP(74,'Building dubbed video...');
+      return mergeVideoAudio(ST.file,ttsBlob);
+    })
+    .then(function(result){
+      var blob=result.blob;
+      ST.outBlob=blob;
+      if(ST.outURL)URL.revokeObjectURL(ST.outURL);
+      ST.outURL=URL.createObjectURL(blob);
+      $('outVid').src=ST.outURL;
+
+      pOk(4,fmtB(blob.size));setP(100,'Done! 🎉');
+      var elapsed=((Date.now()-ST.t0)/1000).toFixed(1);
+      var note=result.audioOnly?' (audio-only mode — browser limitation)':'';
+      $('outMeta').innerHTML='<span>⏱ <strong>'+elapsed+'s</strong></span><span>📄 <strong>'+ST.segs.length+' segs</strong></span><span>💾 <strong>'+fmtB(blob.size)+'</strong></span><span>🎙 <strong>'+tgt.toUpperCase()+note+'</strong></span>';
+      $('cardOut').style.display='block';
+      $('cardOut').scrollIntoView({behavior:'smooth'});
+      ST.busy=false;
+      bMsg('','');
+    })
+    .catch(function(e){
+      console.error(e);
+      fail(e.message,null);
+    });
+  };
+  rdr.readAsArrayBuffer(ST.file);
+});
+
+// ── DOWNLOADS ──────────────────────────────────────────────────────────────
+$('btnDl').addEventListener('click',function(){
+  if(ST.outBlob)dl(ST.outBlob,'VoiceDub_'+Date.now()+'.webm');
+});
+$('btnSrt').addEventListener('click',function(){
+  if(!ST.segs.length)return;
+  var s='';
+  ST.segs.forEach(function(sg,i){s+=(i+1)+'\n'+fmtSrt(sg.start)+' --> '+fmtSrt(sg.end)+'\n'+(sg.dubbed||sg.text)+'\n\n';});
+  dl(new Blob([s],{type:'text/plain'}),'VoiceDub_subs.srt');
+});
+$('btnTxt').addEventListener('click',function(){
+  if(!ST.segs.length)return;
+  var o=ST.segs.map(function(s){return s.text;}).join('\n');
+  var d=ST.segs.map(function(s){return s.dubbed||s.text;}).join('\n');
+  dl(new Blob(['ORIGINAL:\n'+o+'\n\nDUBBED:\n'+d],{type:'text/plain'}),'VoiceDub_transcript.txt');
+});
+$('btnReset').addEventListener('click',function(){
+  SYN.cancel();
+  ST.file=null;ST.busy=false;
+  if(ST.srcURL){URL.revokeObjectURL(ST.srcURL);ST.srcURL=null;}
+  if(ST.outURL){URL.revokeObjectURL(ST.outURL);ST.outURL=null;}
+  ST.segs=[];ST.outBlob=null;
+  $('srcVid').src='';$('srcVid').style.display='none';
+  $('outVid').src='';
+  $('fileIn').value='';
+  $('cardProc').style.display='none';
+  $('cardOut').style.display='none';
+  $('progWrap').style.display='none';
+  resetPipes();bMsg('','');
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+})();
+</script>
+</body>
+</html>
